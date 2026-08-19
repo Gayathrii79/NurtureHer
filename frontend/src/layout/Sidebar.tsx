@@ -1,0 +1,84 @@
+import { NavLink } from "react-router-dom";
+import { Heart, Menu, Sparkles, X } from "lucide-react";
+import { navigationSections } from "@/layout/navigation";
+import { cn } from "@/lib/utils";
+
+export function Sidebar({ open, onToggle, onClose }: { open: boolean; onToggle: () => void; onClose: () => void }) {
+  return (
+    <>
+      <button
+        type="button"
+        onClick={onToggle}
+        className="fixed left-4 top-4 z-50 flex h-11 w-11 items-center justify-center rounded-2xl bg-white/90 shadow-card backdrop-blur-xl transition hover:-translate-y-0.5 lg:hidden"
+        aria-label="Open navigation"
+      >
+        <Menu className="h-5 w-5 text-primary" />
+      </button>
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-40 w-[min(88vw,21rem)] transform border-r border-white/70 bg-white/82 px-4 py-5 shadow-glow backdrop-blur-2xl transition duration-300 dark:border-white/10 dark:bg-[#241827]/88 sm:px-5 sm:py-6 lg:sticky lg:top-0 lg:h-screen lg:w-80 lg:translate-x-0",
+          open ? "translate-x-0" : "-translate-x-full",
+        )}
+      >
+        <div className="mb-7 flex items-center justify-between gap-3 px-2">
+          <div className="flex items-center gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-accent text-white shadow-glow">
+            <Heart className="h-6 w-6 fill-white/20" />
+          </div>
+          <div>
+            <p className="text-lg font-black tracking-tight text-ink dark:text-white">NurtureHer</p>
+            <p className="text-xs font-bold text-muted dark:text-white/50">The Care. The Cure.</p>
+          </div>
+          </div>
+          <button type="button" onClick={onClose} className="rounded-xl p-2 text-muted transition hover:bg-pink-50 hover:text-primary lg:hidden" aria-label="Close navigation">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="gradient-border surface-shine mb-5 rounded-[22px] bg-gradient-to-br from-pink-50 via-white to-purple-50 p-4 dark:from-white/10 dark:to-white/5">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-primary" />
+            <p className="text-sm font-black text-ink dark:text-white">Care plan active</p>
+          </div>
+          <p className="mt-1 text-xs leading-5 text-muted dark:text-white/55">4 reminders, 2 follow-ups, low risk status.</p>
+        </div>
+
+        <nav className="no-scrollbar flex h-[calc(100vh-232px)] flex-col gap-5 overflow-y-auto pr-1">
+          {navigationSections.map((section) => (
+            <div key={section.title}>
+              <p className="mb-2 px-3 text-[11px] font-black uppercase tracking-[0.22em] text-muted/60 dark:text-white/35">{section.title}</p>
+              <div className="space-y-1">
+                {section.items.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <NavLink
+                      key={item.path}
+                      to={item.path}
+                      onClick={() => {
+                        if (window.innerWidth < 1024) onClose();
+                      }}
+                      className={({ isActive }) =>
+                        cn(
+                          "group flex min-h-11 items-center gap-3 rounded-2xl px-3 text-sm font-bold outline-none transition duration-200 focus-visible:ring-2 focus-visible:ring-primary/30",
+                          isActive
+                            ? "bg-gradient-to-r from-primary to-accent text-white shadow-glow"
+                            : "text-muted hover:-translate-y-0.5 hover:bg-white/78 hover:text-primary hover:shadow-soft dark:text-white/60 dark:hover:bg-white/10",
+                        )
+                      }
+                    >
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white/70 transition group-hover:bg-pink-50 dark:bg-white/10">
+                        <Icon className="h-4 w-4 shrink-0" />
+                      </span>
+                      <span className="truncate">{item.label}</span>
+                    </NavLink>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </nav>
+      </aside>
+      {open ? <button aria-label="Close navigation" className="fixed inset-0 z-30 bg-ink/20 backdrop-blur-sm lg:hidden" onClick={onToggle} /> : null}
+    </>
+  );
+}

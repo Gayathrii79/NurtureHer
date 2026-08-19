@@ -1,0 +1,117 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color: #251827;
+    background: #fff8fb;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  .dark {
+    color: #fff7fa;
+    background: #1f1521;
+  }
+
+  body {
+    margin: 0;
+    min-width: 320px;
+    min-height: 100vh;
+    overflow-x: hidden;
+    background: #fff8fb;
+  }
+
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+  }
+}
+
+@layer utilities {
+  .glass {
+    background:
+      linear-gradient(145deg, rgba(255, 255, 255, 0.86), rgba(255, 248, 251, 0.72)),
+      rgba(255, 255, 255, 0.74);
+    border: 1px solid rgba(255, 255, 255, 0.86);
+    box-shadow: 0 24px 80px rgba(126, 52, 98, 0.13);
+    backdrop-filter: blur(28px);
+  }
+
+  .dark .glass {
+    background: rgba(44, 31, 48, 0.78);
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+
+  .gradient-border {
+    position: relative;
+  }
+
+  .gradient-border::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(135deg, rgba(236, 72, 153, 0.45), rgba(192, 132, 252, 0.32), rgba(255, 255, 255, 0.74));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  .premium-gradient {
+    background:
+      linear-gradient(135deg, rgba(236, 72, 153, 0.12), transparent 32%),
+      linear-gradient(225deg, rgba(192, 132, 252, 0.12), transparent 38%),
+      linear-gradient(180deg, rgba(141, 215, 195, 0.08), transparent 44%),
+      linear-gradient(135deg, #fff8fb 0%, #fff 46%, #faf5ff 100%);
+  }
+
+  .dark .premium-gradient {
+    background:
+      linear-gradient(135deg, rgba(236, 72, 153, 0.15), transparent 34%),
+      linear-gradient(225deg, rgba(192, 132, 252, 0.14), transparent 36%),
+      linear-gradient(135deg, #1f1521 0%, #2a1d2f 52%, #211827 100%);
+  }
+
+  .soft-grid {
+    background-image:
+      linear-gradient(rgba(236, 72, 153, 0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(236, 72, 153, 0.06) 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+
+  .noise {
+    background-image:
+      linear-gradient(135deg, rgba(236, 72, 153, 0.08), transparent 36%),
+      linear-gradient(225deg, rgba(192, 132, 252, 0.08), transparent 42%);
+  }
+
+  .surface-shine {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .surface-shine::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(120deg, rgba(255, 255, 255, 0.34), transparent 34%, rgba(255, 255, 255, 0.14));
+    pointer-events: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
