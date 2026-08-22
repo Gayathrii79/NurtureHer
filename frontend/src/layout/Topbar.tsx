@@ -5,8 +5,10 @@ import { SearchBar } from "@/components/common/SearchBar";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { LanguageSelect } from "@/components/ui/select";
+import { useAuth } from "@/context/useAuth";
 
 export function Topbar() {
+  const { user, signOut } = useAuth();
   const [dark, setDark] = useState(false);
 
   useEffect(() => {
@@ -17,7 +19,7 @@ export function Topbar() {
     <header className="sticky top-0 z-20 border-b border-white/70 bg-background/78 px-4 py-3 backdrop-blur-2xl dark:border-white/10 dark:bg-[#1f1521]/78 md:px-8 md:py-4">
       <div className="flex items-center justify-between gap-4">
         <div className="hidden min-w-0 md:block">
-          <p className="text-sm font-bold text-muted dark:text-white/60">Good morning, Aditi</p>
+          <p className="text-sm font-bold text-muted dark:text-white/60">Good morning, {user?.name ?? "there"}</p>
           <h2 className="truncate text-xl font-black text-ink dark:text-white">Your wellness dashboard is ready</h2>
         </div>
         <div className="ml-12 flex flex-1 items-center gap-3 md:ml-0 md:max-w-xl">
@@ -52,7 +54,7 @@ export function Topbar() {
                   </DropdownMenu.Item>
                 ))}
                 <DropdownMenu.Separator className="my-1 h-px bg-pink-100 dark:bg-white/10" />
-                <DropdownMenu.Item className="cursor-pointer rounded-2xl px-3 py-2 text-sm font-bold text-primary outline-none transition hover:bg-pink-50 dark:hover:bg-white/10">
+                <DropdownMenu.Item onSelect={() => void signOut()} className="cursor-pointer rounded-2xl px-3 py-2 text-sm font-bold text-primary outline-none transition hover:bg-pink-50 dark:hover:bg-white/10">
                   Sign out
                 </DropdownMenu.Item>
               </DropdownMenu.Content>

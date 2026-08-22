@@ -2,6 +2,8 @@ import { AnimatePresence } from "framer-motion";
 import { lazy, Suspense } from "react";
 import { Route, Routes, useLocation } from "react-router-dom";
 import { LoadingSkeleton } from "@/components/common/States";
+import { useAuth } from "@/context/useAuth";
+import { AuthPage } from "@/pages/AuthPages";
 import { AppShell } from "@/layout/AppShell";
 
 const Dashboard = lazy(() => import("@/pages/Dashboard").then((module) => ({ default: module.Dashboard })));
@@ -24,6 +26,9 @@ const NotFoundPage = lazy(() => import("@/pages/SupportPages").then((module) => 
 
 export default function App() {
   const location = useLocation();
+  const { user, loading } = useAuth();
+  if (loading) return <LoadingSkeleton />;
+  if (!user) return <AuthPage />;
   return (
     <AppShell>
       <AnimatePresence mode="wait">

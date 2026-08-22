@@ -6,14 +6,20 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { promptSuggestions } from "@/data/mock";
-
-const messages = [
-  { role: "assistant", text: "Good morning, Aditi. Your cycle window and mood trend look steady today. How are you feeling?" },
-  { role: "user", text: "I feel tired and a little anxious." },
-  { role: "assistant", text: "**That sounds heavy.** Try a glass of water, a protein snack, and a 3-minute breathing pause. If anxiety keeps rising, connect with your ASHA worker or clinician." },
-];
+import { api, ChatMessage } from "@/lib/api";
+import { useEffect, useState } from "react";
 
 export function Coach() {
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const [sending, setSending] = useState(false);
+  useEffect(() => { api.chatHistory().then(setMessages).catch(() => undefined); }, []);
+  async function send() {
+    if (!message.trim()) return;
+    setSending(true); setError("");
+    try { const response = await api.sendChat(message.trim(), "en"); setMessages((items) => [...items, response]); setMessage(""); } catch (reason) { setError(reason instanceof Error ? reason.message : "Message failed"); } finally { setSending(false); }
+  }
   return (
     <Page title="AI Health Coach" subtitle="Personalized, multilingual guidance with safe clinical guardrails.">
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
@@ -30,31 +36,27 @@ export function Coach() {
             </div>
           </div>
           <div className="flex-1 space-y-4 overflow-y-auto bg-gradient-to-b from-pink-50/40 to-white/20 p-5 dark:from-white/5 dark:to-transparent">
-            {messages.map((message, index) => (
-              <div key={index} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
+            {messages.map((item) => (
+              <div key={item.id} className="space-y-2">
+                <div className="flex justify-end"><div className="max-w-[82%] rounded-[24px] bg-gradient-to-r from-primary to-accent px-5 py-4 text-sm leading-6 text-white shadow-sm">{item.message}</div></div>
                 <div className="max-w-[82%]">
-                  <div
-                    className={`rounded-[24px] px-5 py-4 text-sm leading-6 shadow-sm ${
-                      message.role === "user" ? "bg-gradient-to-r from-primary to-accent text-white" : "bg-pink-50 text-ink dark:bg-white/10 dark:text-white"
-                    }`}
-                  >
-                    <ReactMarkdown>{message.text}</ReactMarkdown>
-                  </div>
-                  {message.role === "assistant" ? (
+                  <div className="rounded-[24px] bg-pink-50 px-5 py-4 text-sm leading-6 text-ink dark:bg-white/10 dark:text-white"><ReactMarkdown>{item.response}</ReactMarkdown></div>
+                  {(
                     <div className="mt-2 flex gap-2">
                       <button className="rounded-full bg-white px-3 py-1 text-xs font-bold text-muted shadow-soft dark:bg-white/10" aria-label="Like response"><ThumbsUp className="inline h-3 w-3" /></button>
                       <button className="rounded-full bg-white px-3 py-1 text-xs font-bold text-muted shadow-soft dark:bg-white/10" aria-label="Save response"><Heart className="inline h-3 w-3" /></button>
                     </div>
-                  ) : null}
+                  )}
                 </div>
               </div>
             ))}
-            <div className="flex items-center gap-2 text-sm font-semibold text-muted">
+            {!messages.length ? <div className="text-sm font-semibold text-muted">No conversations yet. Ask the coach a question.</div> : null}
+            {sending ? <div className="flex items-center gap-2 text-sm font-semibold text-muted">
               <span className="h-2 w-2 animate-bounce rounded-full bg-primary" />
               <span className="h-2 w-2 animate-bounce rounded-full bg-secondary [animation-delay:120ms]" />
               <span className="h-2 w-2 animate-bounce rounded-full bg-accent [animation-delay:240ms]" />
               Coach is drafting a gentle check-in
-            </div>
+            </div> : null}
           </div>
           <div className="border-t border-pink-100 bg-white/70 p-5 dark:border-white/10 dark:bg-white/5">
             <div className="mb-3 flex flex-wrap gap-2">
@@ -66,14 +68,15 @@ export function Coach() {
               <Button variant="ghost" className="h-12 w-12 px-0" aria-label="Attach file">
                 <Paperclip className="h-5 w-5" />
               </Button>
-              <input className="min-w-0 flex-1 bg-transparent px-4 text-sm outline-none dark:text-white" placeholder="Ask about symptoms, nutrition, cycle, mood..." />
+              <input value={message} onChange={(event) => setMessage(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void send(); }} className="min-w-0 flex-1 bg-transparent px-4 text-sm outline-none dark:text-white" placeholder="Ask about symptoms, nutrition, cycle, mood..." />
               <Button variant="ghost" className="h-12 w-12 px-0" aria-label="Voice input">
                 <Mic className="h-5 w-5" />
               </Button>
-              <Button className="h-12 w-12 px-0" aria-label="Send message">
+              <Button className="h-12 w-12 px-0" aria-label="Send message" onClick={() => void send()} disabled={sending}>
                 <Send className="h-5 w-5" />
               </Button>
             </div>
+            {error ? <p className="mt-2 text-sm font-bold text-danger">{error}</p> : null}
           </div>
         </Card>
         <Card>
