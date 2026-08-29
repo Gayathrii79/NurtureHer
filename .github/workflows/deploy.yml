@@ -22,11 +22,11 @@ jobs:
           echo "${{ secrets.KUBE_CONFIG }}" > ~/.kube/config
       - name: Deploy manifests
         run: |
-          kubectl apply -f deploy/k8s/configmap.yaml
-          kubectl apply -f deploy/k8s/secret.example.yaml --dry-run=client -o yaml
-          kubectl apply -f deploy/k8s/api-deployment.yaml
-          kubectl apply -f deploy/k8s/worker-deployment.yaml
-          kubectl apply -f deploy/k8s/service.yaml
-          kubectl apply -f deploy/k8s/ingress.yaml
+          kubectl apply -f deployment/k8s/configmap.yaml
+          kubectl apply -f deployment/k8s/secret.example.yaml --dry-run=client -o yaml
+          kubectl apply -f deployment/k8s/api-deployment.yaml
+          kubectl apply -f deployment/k8s/worker-deployment.yaml
+          kubectl apply -f deployment/k8s/service.yaml
+          kubectl apply -f deployment/k8s/ingress.yaml
           kubectl rollout status deployment/nurtureher-api
 

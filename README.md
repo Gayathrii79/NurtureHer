@@ -35,7 +35,7 @@ app/
   analytics/           Mother and ASHA analytics
   monitoring/          Prometheus metrics
   workers/             Celery app and tasks
-deploy/                Nginx, Kubernetes, Prometheus, Grafana
+deployment/            Nginx, Kubernetes, Prometheus, Grafana
 docs/                  OpenAPI, Postman, operations docs
 scripts/               Seed and operations scripts
 tests/                 Unit, integration, e2e, load scripts
@@ -180,15 +180,15 @@ docker compose -f docker-compose.prod.yml up --build -d
 Kubernetes:
 
 ```bash
-kubectl apply -f deploy/k8s/configmap.yaml
+kubectl apply -f deployment/k8s/configmap.yaml
 kubectl create secret generic nurtureher-secrets --from-env-file=.env
-kubectl apply -f deploy/k8s/api-deployment.yaml
-kubectl apply -f deploy/k8s/worker-deployment.yaml
-kubectl apply -f deploy/k8s/service.yaml
-kubectl apply -f deploy/k8s/ingress.yaml
+kubectl apply -f deployment/k8s/api-deployment.yaml
+kubectl apply -f deployment/k8s/worker-deployment.yaml
+kubectl apply -f deployment/k8s/service.yaml
+kubectl apply -f deployment/k8s/ingress.yaml
 ```
 
-Replace `ghcr.io/OWNER/nurtureher-api:latest` and `api.example.com` in `deploy/k8s/*` before production use.
+Replace `ghcr.io/OWNER/nurtureher-api:latest` and `api.example.com` in `deployment/k8s/*` before production use.
 
 ## Security
 
@@ -216,8 +216,6 @@ Production checklist:
 - Rotate SMS/Gemini credentials regularly.
 
 ## Database Operations
-
-Migrations:
 
 ```bash
 alembic revision --autogenerate -m "description"

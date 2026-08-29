@@ -33,7 +33,7 @@ export function AuthPage() {
       <Card className="w-full max-w-md p-7">
         <div className="mb-7 flex items-center gap-3">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-accent text-white shadow-glow"><HeartPulse className="h-6 w-6" /></div>
-          <div><p className="text-lg font-black text-ink">NurtureHer</p><p className="text-sm text-muted">Your care, connected.</p></div>
+          <div><p className="text-lg font-black text-ink">NurtureHer</p><p className="text-sm text-muted">The care, The cure.</p></div>
         </div>
         <h1 className="text-2xl font-black text-ink">{registering ? "Create your account" : "Welcome back"}</h1>
         <p className="mt-2 text-sm leading-6 text-muted">{registering ? "Start a secure personal wellness record." : "Sign in to continue your wellness journey."}</p>

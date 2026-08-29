@@ -1,6 +1,7 @@
 # Deployment Guide
 
 ## Local Production Run
+Production Kubernetes manifests live under `deployment/k8s/`.
 
 ```sh
 cp .env.example .env
