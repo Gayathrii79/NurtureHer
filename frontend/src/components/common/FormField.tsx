@@ -1,25 +1,27 @@
-import { InputHTMLAttributes, ReactNode, TextareaHTMLAttributes, useId } from "react";
+import { forwardRef, InputHTMLAttributes, ReactNode, TextareaHTMLAttributes, useId } from "react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
-export function FormField({
+type FormFieldProps = InputHTMLAttributes<HTMLInputElement> & { label: string; error?: ReactNode; hint?: ReactNode };
+
+export const FormField = forwardRef<HTMLInputElement, FormFieldProps>(function FormField({
   label,
   error,
   hint,
   className,
   ...props
-}: InputHTMLAttributes<HTMLInputElement> & { label: string; error?: ReactNode; hint?: ReactNode }) {
+}, ref) {
   const id = useId();
   const descriptionId = `${id}-description`;
   return (
     <label htmlFor={id} className={cn("block text-sm font-bold text-muted dark:text-white/60", className)}>
       {label}
-      <Input id={id} aria-invalid={Boolean(error)} aria-describedby={error || hint ? descriptionId : undefined} className="mt-2" {...props} />
+      <Input ref={ref} id={id} aria-invalid={Boolean(error)} aria-describedby={error || hint ? descriptionId : undefined} className="mt-2" {...props} />
       {error ? <span id={descriptionId} className="mt-1 block text-xs font-bold text-danger">{error}</span> : null}
       {!error && hint ? <span id={descriptionId} className="mt-1 block text-xs font-semibold text-muted/80 dark:text-white/45">{hint}</span> : null}
     </label>
   );
-}
+});
 
 export function TextAreaField({
   label,
