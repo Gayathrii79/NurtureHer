@@ -24,6 +24,7 @@ export type CaregiverContent = { id: string; title: string; description: string;
 export type HighRiskCase = { id: string; user_id: string; risk_type: string; risk_level: string; assigned_worker_id: string | null; status: string; created_at: string };
 export type Alert = { id: string; user_id: string; message: string; sent_status: string; sent_at: string | null };
 export type DashboardStats = { today_mood: Mood | null; symptoms: Symptom | null; cycle_prediction: string | null; pcos_risk: string | null; ppd_status: string | null };
+export type WellnessInsight = { category: string; severity: string; message: string };
 export type Profile = { id: string; age: number | null; weight: number | null; height: number | null; blood_group: string | null; pregnancy_status: string | null; delivery_date: string | null; emergency_contact: string | null; district: string | null; village: string | null; created_at: string };
 
 let accessToken = sessionStorage.getItem("nurtureher_access_token");
@@ -70,7 +71,7 @@ export const api = {
   logout: () => request<void>("/auth/logout", { method: "POST", body: JSON.stringify({ refresh_token: refreshToken }) }),
   dashboard: () => request<DashboardStats>("/wellness/dashboard"),
   analytics: () => request<Record<string, unknown>>("/wellness/analytics"),
-  insights: () => request<{ insights: { category: string; severity: string; message: string }[] }>("/wellness/insights"),
+  insights: () => request<{ insights: WellnessInsight[] }>("/wellness/insights"),
   moods: () => request<Mood[]>("/wellness/mood"),
   createMood: (mood: Mood["mood"], note: string | null) => request<Mood>("/wellness/mood", { method: "POST", body: JSON.stringify({ mood, note }) }),
   symptoms: () => request<Symptom[]>("/wellness/symptoms"),

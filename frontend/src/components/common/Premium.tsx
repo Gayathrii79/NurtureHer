@@ -114,11 +114,11 @@ export function ProgressRow({ label, value, detail }: { label: string; value: nu
   );
 }
 
-export function Timeline({ items }: { items: { title: string; detail: string; time: string }[] }) {
+export function Timeline({ items }: { items: { id?: string; title: string; detail: string; time: string }[] }) {
   return (
     <div className="space-y-4">
       {items.map((item, index) => (
-        <div key={item.title} className="grid grid-cols-[28px_1fr] gap-3">
+        <div key={item.id ?? `${item.title}-${item.time}-${index}`} className="grid grid-cols-[28px_1fr] gap-3">
           <div className="flex flex-col items-center">
             <span className="h-3 w-3 rounded-full bg-gradient-to-br from-primary to-accent shadow-glow" />
             {index < items.length - 1 ? <span className="mt-2 h-full min-h-10 w-px bg-pink-100 dark:bg-white/10" /> : null}

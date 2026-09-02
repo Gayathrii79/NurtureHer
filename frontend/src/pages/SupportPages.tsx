@@ -1,6 +1,6 @@
-import { Activity, Bell, CheckCircle2, FileText, Lock, Settings as SettingsIcon, ShieldCheck, UserRound } from "lucide-react";
-import { useEffect, useState } from "react";
-import { api, Alert, CaregiverContent, ChatMessage, HighRiskCase } from "@/lib/api";
+import { Activity, Bell, CheckCircle2, FileText, Lightbulb, Lock, Settings as SettingsIcon, ShieldCheck, UserRound } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { api, Alert, CaregiverContent, ChatMessage, HighRiskCase, WellnessInsight } from "@/lib/api";
 import { IconNote, StatTile } from "@/components/common/InfoBlocks";
 import { EmptyState, LoadingSkeleton } from "@/components/common/States";
 import { Page } from "@/components/common/Page";
@@ -11,16 +11,144 @@ import { Card } from "@/components/ui/card";
 import { useAuth } from "@/context/useAuth";
 
 export function InsightsPage() {
-  const [data, setData] = useState<Record<string, unknown> | null>(null);
-  useEffect(() => { api.analytics().then(setData).catch(() => undefined); }, []);
-  return <Page title="Health Insights" subtitle="Analytics returned from your wellness records.">{data ? <Card><SectionHeader title="Mother analytics" subtitle="Current backend summary" /><pre className="overflow-auto rounded-2xl bg-pink-50 p-4 text-xs text-ink dark:bg-white/10 dark:text-white">{JSON.stringify(data, null, 2)}</pre></Card> : <LoadingSkeleton />}</Page>;
+  const [items, setItems] = useState<WellnessInsight[] | null>(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    api.insights()
+      .then((response) => setItems(response.insights))
+      .catch((reason) => {
+        setError(reason instanceof Error ? reason.message : "Unable to load health insights");
+        setItems([]);
+      });
+  }, []);
+
+  const severityStyle = (severity: string) => {
+    switch (severity.toLowerCase()) {
+      case "high":
+      case "critical":
+        return "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-200";
+      case "medium":
+      case "moderate":
+        return "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-200";
+      default:
+        return "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200";
+    }
+  };
+
+  return (
+    <Page title="Health Insights" subtitle="Personal guidance generated from your latest wellness records.">
+      <Card>
+        <SectionHeader title="Your wellness insights" subtitle="Review these signals and continue tracking changes over time" />
+        {items === null ? <LoadingSkeleton /> : error ? (
+          <IconNote icon={Activity} title="Insights unavailable" text={error} />
+        ) : items.length ? (
+          <div className="grid gap-4 md:grid-cols-2">
+            {items.map((item, index) => (
+              <article key={`${item.category}-${item.message}-${index}`} className="rounded-[22px] border border-pink-100 bg-gradient-to-br from-white to-pink-50/80 p-5 shadow-soft dark:border-white/10 dark:from-white/10 dark:to-white/5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                      <Lightbulb className="h-5 w-5" />
+                    </span>
+                    <h2 className="truncate font-black capitalize text-ink dark:text-white">{item.category.replace(/_/g, " ")}</h2>
+                  </div>
+                  <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-black capitalize ${severityStyle(item.severity)}`}>
+                    {item.severity}
+                  </span>
+                </div>
+                <p className="mt-4 text-sm leading-6 text-muted dark:text-white/65">{item.message}</p>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <EmptyState title="No insights yet" text="Add mood, symptom, cycle, or assessment records to generate personal insights." />
+        )}
+      </Card>
+    </Page>
+  );
 }
 
 export function JournalPage() {
-  const [mood, setMood] = useState("happy"); const [note, setNote] = useState(""); const [entries, setEntries] = useState<{ title: string; detail: string; time: string }[]>([]); const [error, setError] = useState("");
-  useEffect(() => { api.journals().then((items) => setEntries(items.map((item) => ({ title: item.title, detail: item.content, time: new Date(item.created_at).toLocaleDateString() })))).catch(() => undefined); }, []);
-  async function save() { try { const item = await api.createJournal(`Mood: ${mood}`, note); setEntries((items) => [{ title: item.title, detail: item.content, time: "Today" }, ...items]); setNote(""); } catch (reason) { setError(reason instanceof Error ? reason.message : "Journal save failed"); } }
-  return <Page title="Mood Journal" subtitle="Private entries saved to your wellness record."><div className="grid gap-6 xl:grid-cols-[420px_minmax(0,1fr)]"><Card><SectionHeader title="How do you feel?" subtitle="Choose a mood and add a note" /><div className="grid grid-cols-5 gap-3">{["happy", "sad", "anxious", "tired", "angry"].map((value) => <button key={value} type="button" onClick={() => setMood(value)} className={`rounded-[20px] p-4 text-sm font-black capitalize ${mood === value ? "bg-primary text-white" : "bg-pink-50 text-muted dark:bg-white/10"}`}>{value}</button>)}</div><textarea className="mt-5 min-h-40 w-full rounded-[24px] border border-pink-100 bg-white/80 p-4 text-sm outline-none dark:border-white/10 dark:bg-white/10 dark:text-white" value={note} onChange={(event) => setNote(event.target.value)} placeholder="Write your private note..." />{error ? <p className="mt-3 text-sm font-bold text-danger">{error}</p> : null}<Button className="mt-4 w-full" disabled={!note.trim()} onClick={() => void save()}><CheckCircle2 className="h-4 w-4" />Save Journal</Button></Card><Card><SectionHeader title="Timeline" subtitle="Recent journal records" />{entries.length ? <Timeline items={entries} /> : <EmptyState />}</Card></div></Page>;
+  const [mood, setMood] = useState("happy");
+  const [note, setNote] = useState("");
+  const [entries, setEntries] = useState<{ id: string; title: string; detail: string; time: string }[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [loadError, setLoadError] = useState("");
+  const [saveError, setSaveError] = useState("");
+  const [saved, setSaved] = useState(false);
+
+  const loadEntries = useCallback(async () => {
+    setLoading(true);
+    setLoadError("");
+    try {
+      const items = await api.journals();
+      setEntries(items.map((item) => ({
+        id: item.id,
+        title: item.title,
+        detail: item.content,
+        time: new Date(item.created_at).toLocaleDateString(),
+      })));
+    } catch (reason) {
+      setLoadError(reason instanceof Error ? reason.message : "Unable to load saved journal entries");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { void loadEntries(); }, [loadEntries]);
+
+  async function save() {
+    const content = note.trim();
+    if (!content || saving) return;
+    setSaving(true);
+    setSaveError("");
+    setSaved(false);
+    try {
+      const item = await api.createJournal(`Mood: ${mood}`, content);
+      setEntries((items) => [{ id: item.id, title: item.title, detail: item.content, time: "Today" }, ...items.filter((entry) => entry.id !== item.id)]);
+      setNote("");
+      setSaved(true);
+      await loadEntries();
+    } catch (reason) {
+      setSaveError(reason instanceof Error ? reason.message : "Journal save failed");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Page title="Mood Journal" subtitle="Private entries saved to your wellness record.">
+      <div className="grid gap-6 xl:grid-cols-[420px_minmax(0,1fr)]">
+        <Card>
+          <SectionHeader title="How do you feel?" subtitle="Choose a mood and add a note" />
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-5 xl:grid-cols-2">
+            {["happy", "sad", "anxious", "tired", "angry"].map((value) => (
+              <button key={value} type="button" onClick={() => { setMood(value); setSaved(false); }} className={`rounded-[20px] p-4 text-sm font-black capitalize ${mood === value ? "bg-primary text-white" : "bg-pink-50 text-muted dark:bg-white/10"}`}>
+                {value}
+              </button>
+            ))}
+          </div>
+          <textarea className="mt-5 min-h-40 w-full rounded-[24px] border border-pink-100 bg-white/80 p-4 text-sm outline-none dark:border-white/10 dark:bg-white/10 dark:text-white" value={note} onChange={(event) => { setNote(event.target.value); setSaved(false); }} placeholder="Write your private note..." />
+          {saveError ? <p className="mt-3 text-sm font-bold text-danger">{saveError}</p> : null}
+          {saved ? <p className="mt-3 text-sm font-bold text-emerald-700 dark:text-emerald-300">Journal entry saved successfully.</p> : null}
+          <Button className="mt-4 w-full" disabled={!note.trim() || saving} onClick={() => void save()}>
+            <CheckCircle2 className="h-4 w-4" />{saving ? "Saving..." : "Save Journal"}
+          </Button>
+        </Card>
+        <Card>
+          <SectionHeader title="Timeline" subtitle="Recent journal records" action={<Button variant="secondary" disabled={loading} onClick={() => void loadEntries()}>Refresh</Button>} />
+          {loading && !entries.length ? <LoadingSkeleton /> : loadError ? (
+            <div className="space-y-4">
+              <IconNote icon={Activity} title="Could not load journal history" text={loadError} />
+              <Button variant="secondary" onClick={() => void loadEntries()}>Try again</Button>
+            </div>
+          ) : entries.length ? <Timeline items={entries} /> : <EmptyState title="No journal entries yet" text="Write your first private note to begin your timeline." />}
+        </Card>
+      </div>
+    </Page>
+  );
 }
 
 export function NutritionPage() { return <Page title="Nutrition Guide" subtitle="Nutrition data is not represented by a dedicated backend endpoint yet."><Card><IconNote icon={FileText} title="Guide content unavailable" text="The current API does not expose nutrition plans or nutrition logs." /></Card></Page>; }

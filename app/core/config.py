@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     backend_cors_origins: str = "http://localhost:3000,http://localhost:5173"
     pcos_model_path: str = "app/ml/artifacts/pcos_random_forest.pkl"
     gemini_api_key: str | None = None
-    gemini_model: str = "gemini-1.5-flash"
+    gemini_model: str = "gemini-3.6-flash"
     sms_provider: str = "twilio"
     twilio_account_sid: str | None = None
     twilio_auth_token: str | None = None
