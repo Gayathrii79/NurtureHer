@@ -1,9 +1,13 @@
 import { NavLink } from "react-router-dom";
 import { Heart, Menu, Sparkles, X } from "lucide-react";
-import { navigationSections } from "@/layout/navigation";
+import { getNavigationSections } from "@/layout/navigation";
+import { useLanguage } from "@/context/useLanguage";
 import { cn } from "@/lib/utils";
 
 export function Sidebar({ open, onToggle, onClose }: { open: boolean; onToggle: () => void; onClose: () => void }) {
+  const { t } = useLanguage();
+  const sections = getNavigationSections(t);
+
   return (
     <>
       <button
@@ -22,13 +26,13 @@ export function Sidebar({ open, onToggle, onClose }: { open: boolean; onToggle: 
       >
         <div className="mb-7 flex items-center justify-between gap-3 px-2">
           <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-accent text-white shadow-glow">
-            <Heart className="h-6 w-6 fill-white/20" />
-          </div>
-          <div>
-            <p className="text-lg font-black tracking-tight text-ink dark:text-white">NurtureHer</p>
-            <p className="text-xs font-bold text-muted dark:text-white/50">The Care. The Cure.</p>
-          </div>
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-accent text-white shadow-glow">
+              <Heart className="h-6 w-6 fill-white/20" />
+            </div>
+            <div>
+              <p className="text-lg font-black tracking-tight text-ink dark:text-white">{t.common.appName}</p>
+              <p className="text-xs font-bold text-muted dark:text-white/50">{t.common.tagline}</p>
+            </div>
           </div>
           <button type="button" onClick={onClose} className="rounded-xl p-2 text-muted transition hover:bg-pink-50 hover:text-primary lg:hidden" aria-label="Close navigation">
             <X className="h-5 w-5" />
@@ -38,13 +42,13 @@ export function Sidebar({ open, onToggle, onClose }: { open: boolean; onToggle: 
         <div className="gradient-border surface-shine mb-5 rounded-[22px] bg-gradient-to-br from-pink-50 via-white to-purple-50 p-4 dark:from-white/10 dark:to-white/5">
           <div className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-primary" />
-            <p className="text-sm font-black text-ink dark:text-white">Care plan active</p>
+            <p className="text-sm font-black text-ink dark:text-white">{t.nav.carePlanActive}</p>
           </div>
-          <p className="mt-1 text-xs leading-5 text-muted dark:text-white/55">4 reminders, 2 follow-ups, low risk status.</p>
+          <p className="mt-1 text-xs leading-5 text-muted dark:text-white/55">{t.nav.carePlanStatus}</p>
         </div>
 
         <nav className="no-scrollbar flex h-[calc(100vh-232px)] flex-col gap-5 overflow-y-auto pr-1">
-          {navigationSections.map((section) => (
+          {sections.map((section) => (
             <div key={section.title}>
               <p className="mb-2 px-3 text-[11px] font-black uppercase tracking-[0.22em] text-muted/60 dark:text-white/35">{section.title}</p>
               <div className="space-y-1">

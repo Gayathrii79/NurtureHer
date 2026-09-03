@@ -19,7 +19,62 @@ import {
   User,
   Users,
   Utensils,
+  LucideIcon,
 } from "lucide-react";
+import { TranslationSchema } from "@/i18n/types";
+
+export interface NavItem {
+  key: keyof TranslationSchema["nav"] | string;
+  label: string;
+  path: string;
+  icon: LucideIcon;
+}
+
+export interface NavSection {
+  title: string;
+  items: NavItem[];
+}
+
+export function getNavigationSections(t: TranslationSchema): NavSection[] {
+  return [
+    {
+      title: t.nav.sections.overview,
+      items: [
+        { key: "dashboard", label: t.nav.dashboard, path: "/", icon: Home },
+        { key: "insights", label: t.nav.insights, path: "/insights", icon: Activity },
+        { key: "coach", label: t.nav.coach, path: "/coach", icon: Bot },
+        { key: "chatHistory", label: t.nav.chatHistory, path: "/chat-history", icon: MessageCircle },
+      ],
+    },
+    {
+      title: t.nav.sections.careTools,
+      items: [
+        { key: "cycle", label: t.nav.cycle, path: "/cycle", icon: CalendarDays },
+        { key: "pcos", label: t.nav.pcos, path: "/pcos", icon: HeartPulse },
+        { key: "ppd", label: t.nav.ppd, path: "/ppd", icon: ShieldAlert },
+        { key: "journal", label: t.nav.journal, path: "/journal", icon: Moon },
+        { key: "nutrition", label: t.nav.nutrition, path: "/nutrition", icon: Utensils },
+        { key: "caregiver", label: t.nav.caregiver, path: "/caregiver", icon: Baby },
+        { key: "emergency", label: t.nav.emergency, path: "/emergency", icon: LifeBuoy },
+      ],
+    },
+    {
+      title: t.nav.sections.teamRecords,
+      items: [
+        { key: "asha", label: t.nav.asha, path: "/asha", icon: Users },
+        { key: "reports", label: t.nav.reports, path: "/reports", icon: BarChart3 },
+        { key: "profile", label: t.nav.profile, path: "/profile", icon: User },
+      ],
+    },
+    {
+      title: t.nav.sections.account,
+      items: [
+        { key: "settings", label: t.nav.settings, path: "/settings", icon: Settings },
+        { key: "logout", label: t.nav.logout, path: "/logout", icon: LogOut },
+      ],
+    },
+  ];
+}
 
 export const navigation = [
   { label: "Dashboard", path: "/", icon: Home },

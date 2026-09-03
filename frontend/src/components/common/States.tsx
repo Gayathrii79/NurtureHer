@@ -1,5 +1,6 @@
 import { AlertCircle, Sparkles } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { useLanguage } from "@/context/useLanguage";
 
 export function LoadingSkeleton() {
   return (
@@ -15,22 +16,24 @@ export function LoadingSkeleton() {
   );
 }
 
-export function EmptyState({ title = "No records yet", text = "New information will appear here as soon as it is available." }) {
+export function EmptyState({ title, text }: { title?: string; text?: string }) {
+  const { t } = useLanguage();
   return (
     <Card className="flex min-h-48 flex-col items-center justify-center text-center">
       <Sparkles className="mb-3 h-8 w-8 text-primary" />
-      <h3 className="font-semibold text-ink dark:text-white">{title}</h3>
-      <p className="mt-2 max-w-sm text-sm text-muted dark:text-white/60">{text}</p>
+      <h3 className="font-semibold text-ink dark:text-white">{title ?? t.dashboard.noInsights}</h3>
+      <p className="mt-2 max-w-sm text-sm text-muted dark:text-white/60">{text ?? t.dashboard.noInsightsDesc}</p>
     </Card>
   );
 }
 
-export function ErrorState() {
+export function ErrorState({ title, text }: { title?: string; text?: string }) {
+  const { t } = useLanguage();
   return (
     <Card className="flex min-h-48 flex-col items-center justify-center text-center">
       <AlertCircle className="mb-3 h-8 w-8 text-rose-500" />
-      <h3 className="font-semibold text-ink dark:text-white">Something needs attention</h3>
-      <p className="mt-2 max-w-sm text-sm text-muted dark:text-white/60">Please refresh or try again shortly.</p>
+      <h3 className="font-semibold text-ink dark:text-white">{title ?? t.common.error}</h3>
+      <p className="mt-2 max-w-sm text-sm text-muted dark:text-white/60">{text ?? t.common.tryAgain}</p>
     </Card>
   );
 }

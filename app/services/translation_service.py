@@ -4,6 +4,7 @@ SUPPORTED_LANGUAGES = {
     "hi": "Hindi",
     "ta": "Tamil",
     "te": "Telugu",
+    "ml": "Malayalam",
 }
 
 LANGUAGE_KEYWORDS = {
@@ -11,6 +12,7 @@ LANGUAGE_KEYWORDS = {
     "hi": {"मैं", "स्वास्थ्य", "दर्द", "गर्भ", "महिला"},
     "ta": {"நான்", "ஆரோக்கியம்", "வலி", "கர்ப்ப", "பெண்"},
     "te": {"నేను", "ఆరోగ్యం", "నొప్పి", "గర్భం", "మహిళ"},
+    "ml": {"ഞാൻ", "ആരോഗ്യം", "വേദന", "ഗർഭം", "സ്ത്രീ"},
 }
 
 
@@ -31,6 +33,8 @@ class TranslationService:
                 scores["ta"] += 1
             elif 0x0C00 <= codepoint <= 0x0C7F:
                 scores["te"] += 1
+            elif 0x0D00 <= codepoint <= 0x0D7F:
+                scores["ml"] += 1
         detected, score = max(scores.items(), key=lambda item: item[1])
         return detected if score > 0 else None
 
