@@ -22,7 +22,7 @@ export type PPDAssessment = { id: string; epds_score: number; sentiment: string;
 export type ChatMessage = { id: string; message: string; response: string; language: string; created_at: string };
 export type CaregiverContent = { id: string; title: string; description: string; video_url: string | null; category: string; created_at: string };
 export type HighRiskCase = { id: string; user_id: string; risk_type: string; risk_level: string; assigned_worker_id: string | null; status: string; created_at: string };
-export type Alert = { id: string; user_id: string; message: string; sent_status: string; sent_at: string | null };
+export type Alert = { id: string; user_id: string; message: string; sent_status: string; sent_at: string | null; created_at?: string };
 export type DashboardStats = { today_mood: Mood | null; symptoms: Symptom | null; cycle_prediction: string | null; pcos_risk: string | null; ppd_status: string | null };
 export type WellnessInsight = { category: string; severity: string; message: string };
 export type Profile = { id: string; age: number | null; weight: number | null; height: number | null; blood_group: string | null; pregnancy_status: string | null; delivery_date: string | null; emergency_contact: string | null; district: string | null; village: string | null; created_at: string };
@@ -92,6 +92,7 @@ export const api = {
   ashaStatistics: () => request<Record<string, unknown>>("/asha/statistics"),
   ashaAlerts: () => request<Alert[]>("/asha/alerts"),
   notifications: () => request<Alert[]>("/notifications"),
+  tts: (text: string, language = "en") => request<{ audio_base64: string; encoding: string; media_type: string }>("/chat/tts", { method: "POST", body: JSON.stringify({ text, language }) }),
 };
 
 export async function uploadVoice(file: File, language: string) {

@@ -98,7 +98,13 @@ export function JournalPage() {
           id: item.id,
           title: item.title,
           detail: item.content,
-          time: new Date(item.created_at).toLocaleDateString(),
+          time: new Date(item.created_at).toLocaleString(undefined, {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
         })),
       );
       setMoodHistory(moods.slice(0, 10));
@@ -114,19 +120,22 @@ export function JournalPage() {
   }, [loadEntries]);
 
   async function save() {
-    const content = note.trim();
-    if (!content || saving) return;
+    if (saving) return;
     setSaving(true);
     setSaveError("");
     setSaved(false);
+
+    const trimmedNote = note.trim();
+    const moodCapitalized = mood.charAt(0).toUpperCase() + mood.slice(1);
+    const moodLabel = t.journal.moods[mood] ?? moodCapitalized;
+    const emoji = MOOD_EMOJI[mood] ?? "🌸";
+    const journalTitle = `${emoji} Mood: ${moodLabel}`;
+    const journalContent = trimmedNote || `Logged mood as ${moodLabel}.`;
+
     try {
-      const [item] = await Promise.all([
-        api.createJournal(`Mood: ${mood}`, content),
-        api.createMood(mood, content.slice(0, 200)),
-      ]);
-      setEntries((items) => [
-        { id: item.id, title: item.title, detail: item.content, time: t.common.today },
-        ...items.filter((entry) => entry.id !== item.id),
+      await Promise.all([
+        api.createJournal(journalTitle, journalContent),
+        api.createMood(mood, trimmedNote || null),
       ]);
       setNote("");
       setSaved(true);
@@ -178,7 +187,7 @@ export function JournalPage() {
           />
           {saveError ? <p className="mt-3 text-sm font-bold text-danger">{saveError}</p> : null}
           {saved ? <p className="mt-3 text-sm font-bold text-emerald-700 dark:text-emerald-300">✅ {t.journal.saveSuccess}</p> : null}
-          <Button id="save-journal-btn" className="mt-4 w-full" disabled={!note.trim() || saving} onClick={() => void save()}>
+          <Button id="save-journal-btn" className="mt-4 w-full" disabled={saving} onClick={() => void save()}>
             <CheckCircle2 className="h-4 w-4" />
             {saving ? t.common.saving : t.journal.saveBtn}
           </Button>

@@ -54,6 +54,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$",
 )
 register_exception_handlers(app)
 app.include_router(api_router, prefix=settings.api_v1_prefix)

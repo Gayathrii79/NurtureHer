@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { LanguageSelector } from "@/components/common/LanguageSelector";
+import { NotificationBell } from "@/components/common/NotificationBell";
 import { useAuth } from "@/context/useAuth";
 import { useLanguage } from "@/context/useLanguage";
 
@@ -37,6 +38,7 @@ export function Topbar() {
         </div>
 
         <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+          <NotificationBell />
           <LanguageSelector />
 
           <Button

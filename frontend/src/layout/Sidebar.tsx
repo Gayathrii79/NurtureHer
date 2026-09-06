@@ -2,11 +2,13 @@ import { NavLink } from "react-router-dom";
 import { Heart, Menu, Sparkles, X } from "lucide-react";
 import { getNavigationSections } from "@/layout/navigation";
 import { useLanguage } from "@/context/useLanguage";
+import { useAuth } from "@/context/useAuth";
 import { cn } from "@/lib/utils";
 
 export function Sidebar({ open, onToggle, onClose }: { open: boolean; onToggle: () => void; onClose: () => void }) {
   const { t } = useLanguage();
-  const sections = getNavigationSections(t);
+  const { user } = useAuth();
+  const sections = getNavigationSections(t, user?.role);
 
   return (
     <>

@@ -23,14 +23,14 @@ class BaseRepository(Generic[ModelT]):
         return obj
 
     async def list(self, stmt: Select | None = None) -> list[ModelT]:
-        query = stmt or select(self.model)
+        query = stmt if stmt is not None else select(self.model)
         if hasattr(self.model, "deleted_at"):
             query = query.where(self.model.deleted_at.is_(None))
         result = await self.db.execute(query)
         return list(result.scalars().all())
 
     async def paginated(self, stmt: Select | None, limit: int, offset: int) -> list[ModelT]:
-        query = stmt or select(self.model)
+        query = stmt if stmt is not None else select(self.model)
         if hasattr(self.model, "deleted_at"):
             query = query.where(self.model.deleted_at.is_(None))
         query = query.limit(limit).offset(offset)

@@ -35,7 +35,18 @@ export interface NavSection {
   items: NavItem[];
 }
 
-export function getNavigationSections(t: TranslationSchema): NavSection[] {
+export function getNavigationSections(t: TranslationSchema, userRole?: string): NavSection[] {
+  const isAshaOrAdmin = userRole?.toLowerCase() === "asha_worker" || userRole?.toLowerCase() === "admin";
+
+  const teamItems: NavItem[] = [];
+  if (isAshaOrAdmin) {
+    teamItems.push({ key: "asha", label: t.nav.asha, path: "/asha", icon: Users });
+  }
+  teamItems.push(
+    { key: "reports", label: t.nav.reports, path: "/reports", icon: BarChart3 },
+    { key: "profile", label: t.nav.profile, path: "/profile", icon: User },
+  );
+
   return [
     {
       title: t.nav.sections.overview,
@@ -60,11 +71,7 @@ export function getNavigationSections(t: TranslationSchema): NavSection[] {
     },
     {
       title: t.nav.sections.teamRecords,
-      items: [
-        { key: "asha", label: t.nav.asha, path: "/asha", icon: Users },
-        { key: "reports", label: t.nav.reports, path: "/reports", icon: BarChart3 },
-        { key: "profile", label: t.nav.profile, path: "/profile", icon: User },
-      ],
+      items: teamItems,
     },
     {
       title: t.nav.sections.account,

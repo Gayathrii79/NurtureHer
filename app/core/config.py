@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 7
     encryption_key: str = Field(default="change-me-32-byte-key-for-prod!!", min_length=16)
-    backend_cors_origins: str = "http://localhost:3000,http://localhost:5173"
+    backend_cors_origins: str = "http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:5173,http://localhost:4173,http://127.0.0.1:4173"
     pcos_model_path: str = "app/ml/artifacts/pcos_random_forest.pkl"
     gemini_api_key: str | None = None
     gemini_model: str = "gemini-1.5-flash"
