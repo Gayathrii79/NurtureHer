@@ -4,39 +4,43 @@ import logging
 from app.services.translation_service import TranslationService
 
 logger = logging.getLogger(__name__)
+import os
+import io
+import httpx
 
 
 class SpeechToTextService:
     async def transcribe(self, content: bytes, language: str) -> str:
-        """Transcribe audio content using OpenAI Whisper API if available.
-
-        Falls back to the original placeholder text when the API key is not set
-        or an error occurs.
-        """
+        """Transcribe audio content using Groq Whisper API via HTTPX."""
         normalized_language = TranslationService().normalize_language(language)
         logger.info("Received voice input for STT: bytes=%s language=%s", len(content), normalized_language)
-        try:
-            import os
-            import openai
-            import io
-            api_key = os.getenv("OPENAI_API_KEY")
-            if api_key:
-                openai.api_key = api_key
-                # OpenAI expects a file-like object with a name attribute
-                audio_file = io.BytesIO(content)
-                audio_file.name = f"voice.{normalized_language}.webm"
-                transcript = await openai.audio.transcriptions.create(
-                    model="whisper-1",
-                    file=audio_file,
-                    language=normalized_language,
-                )
-                # transcript.text contains the recognized speech
-                return transcript.text.strip()
-        except Exception as e:
-            logger.warning("OpenAI Whisper transcription failed: %s", e)
-        # Fallback placeholder (preserves existing API contract)
-        return f"Voice message transcribed in {normalized_language}. Audio size: {len(content)} bytes."
 
+        api_key = os.getenv("GROQ_API_KEY")
+        if not api_key:
+            logger.error("GROQ_API_KEY is missing; cannot perform speech transcription.")
+            raise RuntimeError("GROQ_API_KEY not set in environment")
+
+        endpoint = "https://api.groq.com/openai/v1/audio/transcriptions"
+        files = {
+            "file": (f"voice.{normalized_language}.webm", content, "audio/webm"),
+        }
+        data = {
+            "model": "whisper-large-v3-turbo",
+            "language": normalized_language,
+        }
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+        }
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.post(endpoint, data=data, files=files, headers=headers, timeout=30.0)
+                response.raise_for_status()
+                result = response.json()
+                # Expected JSON: { "text": "transcript" }
+                return result.get("text", "").strip()
+            except httpx.HTTPError as e:
+                logger.error("Groq Whisper transcription HTTP error: %s", e)
+                raise RuntimeError("Speech transcription failed")
 
 
 class TextToSpeechService:

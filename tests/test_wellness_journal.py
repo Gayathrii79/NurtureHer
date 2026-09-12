@@ -6,6 +6,11 @@ LIVE_API = "http://localhost:8000/api/v1"
 
 
 def test_mood_and_journal_live_api_and_user_isolation():
+    # Skip if live API server is not running
+    try:
+        requests.get(LIVE_API, timeout=2)
+    except requests.exceptions.RequestException:
+        pytest.skip("Live API server not available; skipping integration test")
     # 1. Register User A
     user_a_email = f"mother_a_{uuid.uuid4().hex[:8]}@example.com"
     pwd = "Password123!"

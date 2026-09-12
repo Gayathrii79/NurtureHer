@@ -19,12 +19,18 @@ class ChatbotService:
         self.translator = TranslationService()
 
     async def message(self, user: User, payload: ChatRequest):
-        detected_language = self.translator.detect_language(payload.message)
-        language = self.translator.normalize_language(detected_language or payload.language, user.preferred_language)
+        language, _ = self.translator.resolve_language(payload.message, payload.language)
         retrieved_context, user_context = await self.rag.build_context(user, payload.message, language)
         history = await self.memory.get_recent_messages(user.id)
         prompt = self._build_prompt(payload.message, language, retrieved_context, user_context, history)
         response = await self.gemini.generate_response(prompt, language)
+
+        # If language defaulted to English but Gemini recognized romanized input and responded
+        # in a regional script, record the actual response language for TTS and history.
+        actual_response_lang = self.translator.detect_language(response)
+        if actual_response_lang and actual_response_lang != language and language == "en":
+            language = actual_response_lang
+
         chat = await ChatRepository(self.db).create(user_id=user.id, message=payload.message, response=response, language=language)
         await self.db.commit()
         await self.memory.append(user.id, payload.message, response)
