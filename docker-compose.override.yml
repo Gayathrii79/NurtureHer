@@ -2,7 +2,7 @@ services:
   api:
     command: sh scripts/docker/start_api.sh
     environment:
-      ENVIRONMENT: production
+      ENVIRONMENT: development
       LOG_LEVEL: INFO
       METRICS_ENABLED: "true"
     healthcheck:

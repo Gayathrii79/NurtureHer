@@ -19,7 +19,15 @@ export type Cycle = { id: string; last_period_date: string; cycle_length: number
 export type CyclePrediction = Cycle & { ovulation_prediction: string; fertility_window_start: string; fertility_window_end: string };
 export type PCOSPrediction = { id: string; risk_level: string; probability: number; recommendations: string; created_at: string };
 export type PPDAssessment = { id: string; epds_score: number; sentiment: string; risk_level: string; created_at: string };
-export type ChatMessage = { id: string; message: string; response: string; language: string; created_at: string };
+export type ChatConversation = {
+  id: string;
+  user_id: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
+  message_count?: number;
+};
+export type ChatMessage = { id: string; conversation_id?: string | null; message: string; response: string; language: string; created_at: string };
 export type CaregiverContent = { id: string; title: string; description: string; video_url: string | null; category: string; created_at: string };
 export type HighRiskCase = { id: string; user_id: string; risk_type: string; risk_level: string; assigned_worker_id: string | null; status: string; created_at: string };
 export type Alert = { id: string; user_id: string; message: string; sent_status: string; sent_at: string | null; created_at?: string };
@@ -85,8 +93,14 @@ export const api = {
   predictPCOS: (payload: Record<string, unknown>) => request<PCOSPrediction>("/pcos/predict", { method: "POST", body: JSON.stringify(payload) }),
   ppdHistory: () => request<PPDAssessment[]>("/ppd/history"),
   assessPPD: (answers: number[], journal_text: string | null) => request<PPDAssessment>("/ppd/assessment", { method: "POST", body: JSON.stringify({ answers, journal_text }) }),
+  listConversations: () => request<ChatConversation[]>("/chat/conversations"),
+  createConversation: (title?: string) => request<ChatConversation>("/chat/conversations", { method: "POST", body: JSON.stringify({ title }) }),
+  getConversation: (id: string) => request<ChatConversation & { messages: ChatMessage[] }>(`/chat/conversations/${id}`),
+  getConversationMessages: (id: string) => request<ChatMessage[]>(`/chat/conversations/${id}/messages`),
+  deleteConversation: (id: string) => request<void>(`/chat/conversations/${id}`, { method: "DELETE" }),
   chatHistory: () => request<ChatMessage[]>("/chat/history"),
-  sendChat: (message: string, language: string) => request<ChatMessage>("/chat/message", { method: "POST", body: JSON.stringify({ message, language }) }),
+  sendChat: (message: string, language: string, conversation_id?: string | null) =>
+    request<ChatMessage>("/chat/message", { method: "POST", body: JSON.stringify({ message, language, conversation_id }) }),
   caregiver: (category: "videos" | "tips" | "articles") => request<CaregiverContent[]>(`/caregiver/${category}`),
   ashaCases: (query = "") => request<HighRiskCase[]>(`/asha/high-risk${query}`),
   ashaStatistics: () => request<Record<string, unknown>>("/asha/statistics"),
@@ -95,10 +109,18 @@ export const api = {
   tts: (text: string, language = "en") => request<{ audio_base64: string; encoding: string; media_type: string }>("/chat/tts", { method: "POST", body: JSON.stringify({ text, language }) }),
 };
 
-export async function uploadVoice(file: File, language: string) {
+export async function uploadVoice(file: File, language: string, conversation_id?: string | null) {
   const form = new FormData();
   form.append("file", file);
-  const response = await fetch(`${API_BASE}/chat/voice?language=${encodeURIComponent(language)}`, { method: "POST", headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined, body: form });
+  let url = `${API_BASE}/chat/voice?language=${encodeURIComponent(language)}`;
+  if (conversation_id) {
+    url += `&conversation_id=${encodeURIComponent(conversation_id)}`;
+  }
+  const response = await fetch(url, {
+    method: "POST",
+    headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
+    body: form,
+  });
   if (!response.ok) throw new Error("Voice message failed");
   return response.json() as Promise<ChatMessage>;
 }

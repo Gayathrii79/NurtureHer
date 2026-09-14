@@ -1,10 +1,10 @@
 from uuid import UUID
 
-from sqlalchemy import desc, or_, select
+from sqlalchemy import asc, desc, or_, select
 
 from app.models.asha import Alert, HighRiskCase
 from app.models.caregiver import CaregiverContent
-from app.models.chat import ChatMessage
+from app.models.chat import ChatConversation, ChatMessage
 from app.models.enums import CaseStatus, RiskLevel
 from app.models.pcos import PCOSPrediction
 from app.models.ppd import PPDAssessment
@@ -34,11 +34,35 @@ class PPDRepository(BaseRepository[PPDAssessment]):
         return result.scalar_one_or_none()
 
 
+class ChatConversationRepository(BaseRepository[ChatConversation]):
+    model = ChatConversation
+
+    async def for_user(self, user_id: UUID, limit: int = 50, offset: int = 0) -> list[ChatConversation]:
+        return await self.paginated(
+            select(ChatConversation).where(ChatConversation.user_id == user_id).order_by(desc(ChatConversation.updated_at)),
+            limit,
+            offset,
+        )
+
+    async def get_for_user(self, conversation_id: UUID, user_id: UUID) -> ChatConversation | None:
+        result = await self.db.execute(
+            select(ChatConversation).where(ChatConversation.id == conversation_id, ChatConversation.user_id == user_id)
+        )
+        return result.scalar_one_or_none()
+
+
 class ChatRepository(BaseRepository[ChatMessage]):
     model = ChatMessage
 
     async def for_user(self, user_id: UUID, limit: int = 50, offset: int = 0) -> list[ChatMessage]:
         return await self.paginated(select(ChatMessage).where(ChatMessage.user_id == user_id).order_by(desc(ChatMessage.created_at)), limit, offset)
+
+    async def for_conversation(self, conversation_id: UUID, user_id: UUID, limit: int = 100, offset: int = 0) -> list[ChatMessage]:
+        return await self.paginated(
+            select(ChatMessage).where(ChatMessage.conversation_id == conversation_id, ChatMessage.user_id == user_id).order_by(asc(ChatMessage.created_at)),
+            limit,
+            offset,
+        )
 
 
 class CaregiverContentRepository(BaseRepository[CaregiverContent]):

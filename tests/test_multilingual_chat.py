@@ -121,13 +121,19 @@ async def test_chatbot_service_resolves_and_persists_language():
 
     with patch.object(service.rag, "build_context", new_callable=AsyncMock) as mock_build_context, \
          patch.object(service.memory, "get_recent_messages", new_callable=AsyncMock) as mock_memory, \
+         patch.object(service.memory, "append", new_callable=AsyncMock), \
          patch.object(service.gemini, "generate_response", new_callable=AsyncMock) as mock_gemini, \
+         patch("app.services.chat_service.ChatConversationRepository") as mock_conv_repo_class, \
          patch("app.services.chat_service.ChatRepository") as mock_repo_class:
 
         mock_build_context.return_value = ("retrieved context", "user context")
         mock_memory.return_value = []
         mock_gemini.return_value = "உங்களுக்கு உதவ நான் இங்கே இருக்கிறேன். ஓய்வெடுக்கவும்."
         
+        mock_conv_instance = AsyncMock()
+        mock_conv_instance.create.return_value = AsyncMock(id="conv-123", title="Enakku romba tired ah irukku")
+        mock_conv_repo_class.return_value = mock_conv_instance
+
         mock_repo_instance = AsyncMock()
         mock_repo_class.return_value = mock_repo_instance
         mock_chat_record = AsyncMock(

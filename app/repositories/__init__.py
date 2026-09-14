@@ -1,6 +1,6 @@
 from app.repositories.alerts import AlertRepository
 from app.repositories.caregiver import CaregiverRepository
-from app.repositories.chat import ChatRepository
+from app.repositories.chat import ChatConversationRepository, ChatRepository
 from app.repositories.cycles import CycleRepository
 from app.repositories.high_risk import HighRiskRepository
 from app.repositories.journals import JournalRepository
@@ -14,6 +14,7 @@ from app.repositories.users import UserRepository
 __all__ = [
     "AlertRepository",
     "CaregiverRepository",
+    "ChatConversationRepository",
     "ChatRepository",
     "CycleRepository",
     "HighRiskRepository",

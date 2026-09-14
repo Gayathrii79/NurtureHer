@@ -12,7 +12,7 @@ from app.core.security import UserRole
 if TYPE_CHECKING:
     from app.models.audit import RefreshToken
     from app.models.asha import Alert, HighRiskCase
-    from app.models.chat import ChatMessage
+    from app.models.chat import ChatConversation, ChatMessage
     from app.models.pcos import PCOSPrediction
     from app.models.ppd import PPDAssessment
     from app.models.wellness import Cycle, Journal, Mood, Symptom
@@ -39,6 +39,7 @@ class User(Base):
     journals: Mapped[list["Journal"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     pcos_predictions: Mapped[list["PCOSPrediction"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     ppd_assessments: Mapped[list["PPDAssessment"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    chat_conversations: Mapped[list["ChatConversation"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     chat_messages: Mapped[list["ChatMessage"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     high_risk_cases: Mapped[list["HighRiskCase"]] = relationship(
         back_populates="user",

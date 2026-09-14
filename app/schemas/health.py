@@ -53,9 +53,23 @@ class PPDAssessmentRead(ORMModel):
     created_at: datetime
 
 
+class ChatConversationCreate(BaseModel):
+    title: str | None = Field(default=None, max_length=255)
+
+
+class ChatConversationRead(ORMModel):
+    id: UUID
+    user_id: UUID
+    title: str
+    created_at: datetime
+    updated_at: datetime
+    message_count: int | None = None
+
+
 class ChatRequest(BaseModel):
     message: str = Field(min_length=1, max_length=5000)
     language: str = Field(default="en", min_length=2, max_length=16)
+    conversation_id: UUID | None = Field(default=None)
 
 
 class ChatUpdate(BaseModel):
@@ -78,10 +92,15 @@ class CaregiverContentUpdate(BaseModel):
 
 class ChatRead(ORMModel):
     id: UUID
+    conversation_id: UUID | None = None
     message: str
     response: str
     language: str
     created_at: datetime
+
+
+class ChatConversationDetailRead(ChatConversationRead):
+    messages: list[ChatRead] = []
 
 
 class CaregiverContentRead(ORMModel):

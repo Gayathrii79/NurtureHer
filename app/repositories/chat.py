@@ -1,4 +1,4 @@
-from app.repositories.health import ChatRepository
+from app.repositories.health import ChatConversationRepository, ChatRepository
 
-__all__ = ["ChatRepository"]
+__all__ = ["ChatConversationRepository", "ChatRepository"]
 
