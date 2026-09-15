@@ -1,26 +1,30 @@
-from sqlalchemy import or_, select
-from sqlalchemy.ext.asyncio import AsyncSession
+﻿from __future__ import annotations
+
+from typing import Any
+import pymongo
 
 from app.core.security import UserRole
-from app.models.user import MotherProfile, User
+from app.models.user import User
 from app.repositories.base import BaseRepository
 
 
 class UserRepository(BaseRepository[User]):
     model = User
 
-    def __init__(self, db: AsyncSession) -> None:
-        super().__init__(db)
-
     async def get_by_email(self, email: str) -> User | None:
-        result = await self.db.execute(select(User).where(User.email == email.lower()))
-        return result.scalar_one_or_none()
+        if not email:
+            return None
+        doc = await self.collection.find_one({"email": email.strip().lower(), "deleted_at": None})
+        if not doc:
+            return None
+        return self.model.from_mongo(doc)
 
     async def asha_workers(self, district: str | None = None, limit: int = 20) -> list[User]:
-        stmt = select(User).where(User.role == UserRole.ASHA_WORKER, User.is_active.is_(True), User.deleted_at.is_(None))
-        if district:
-            stmt = stmt.outerjoin(MotherProfile, MotherProfile.user_id == User.id).where(
-                or_(MotherProfile.district == district, MotherProfile.district.is_(None))
-            )
-        result = await self.db.execute(stmt.order_by(User.created_at).limit(limit))
-        return list(result.scalars().unique().all())
+        query: dict[str, Any] = {
+            "role": UserRole.ASHA_WORKER.value,
+            "is_active": True,
+            "deleted_at": None,
+        }
+        cursor = self.collection.find(query).sort("created_at", pymongo.ASCENDING).limit(limit)
+        docs = await cursor.to_list(length=limit)
+        return [self.model.from_mongo(doc) for doc in docs if doc]

@@ -1,4 +1,4 @@
-from sqlalchemy.ext.asyncio import AsyncSession
+from typing import Any
 
 from app.models.asha import Alert
 from app.models.user import User
@@ -6,7 +6,7 @@ from app.repositories.alerts import AlertRepository
 
 
 class NotificationService:
-    def __init__(self, db: AsyncSession) -> None:
+    def __init__(self, db: Any) -> None:
         self.db = db
 
     async def queue_sms_alert(self, user: User, message: str) -> Alert:

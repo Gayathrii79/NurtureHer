@@ -1,69 +1,111 @@
+﻿from __future__ import annotations
+
 import uuid
 from datetime import date, datetime, timedelta
-from typing import TYPE_CHECKING
+from typing import Any
 
-from sqlalchemy import Boolean, Date, DateTime, Enum, ForeignKey, Integer, String, Text, func
-from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-
-from app.core.database import Base
+from app.models.base import BaseDocument, parse_date, parse_uuid
 from app.models.enums import MoodOption
 
-if TYPE_CHECKING:
-    from app.models.user import User
+
+class Mood(BaseDocument):
+    collection_name = "moods"
+
+    def __init__(self, **kwargs: Any) -> None:
+        self.user_id: uuid.UUID = parse_uuid(kwargs.pop("user_id", None)) or uuid.uuid4()
+        mood_val = kwargs.pop("mood", MoodOption.HAPPY)
+        self.mood: MoodOption = mood_val if isinstance(mood_val, MoodOption) else MoodOption(mood_val)
+        self.note: str | None = kwargs.pop("note", None)
+        super().__init__(**kwargs)
+
+    @classmethod
+    def from_mongo(cls, doc: dict[str, Any] | None) -> Mood | None:
+        if not doc:
+            return None
+        doc_copy = dict(doc)
+        if "_id" in doc_copy:
+            doc_copy["id"] = parse_uuid(doc_copy.pop("_id"))
+        if "user_id" in doc_copy:
+            doc_copy["user_id"] = parse_uuid(doc_copy["user_id"])
+        if "mood" in doc_copy and not isinstance(doc_copy["mood"], MoodOption):
+            try:
+                doc_copy["mood"] = MoodOption(doc_copy["mood"])
+            except Exception:
+                doc_copy["mood"] = MoodOption.NEUTRAL
+        return cls(**doc_copy)
 
 
-class Mood(Base):
-    __tablename__ = "moods"
+class Symptom(BaseDocument):
+    collection_name = "symptoms"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False)
-    mood: Mapped[MoodOption] = mapped_column(Enum(MoodOption, name="mood_option"), nullable=False)
-    note: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    def __init__(self, **kwargs: Any) -> None:
+        self.user_id: uuid.UUID = parse_uuid(kwargs.pop("user_id", None)) or uuid.uuid4()
+        self.fatigue: bool = kwargs.pop("fatigue", False)
+        self.headache: bool = kwargs.pop("headache", False)
+        self.sleep_issue: bool = kwargs.pop("sleep_issue", False)
+        self.anxiety: bool = kwargs.pop("anxiety", False)
+        self.cramps: bool = kwargs.pop("cramps", False)
+        super().__init__(**kwargs)
 
-    user: Mapped["User"] = relationship(back_populates="moods")
-
-
-class Symptom(Base):
-    __tablename__ = "symptoms"
-
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False)
-    fatigue: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    headache: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    sleep_issue: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    anxiety: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    cramps: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-
-    user: Mapped["User"] = relationship(back_populates="symptoms")
+    @classmethod
+    def from_mongo(cls, doc: dict[str, Any] | None) -> Symptom | None:
+        if not doc:
+            return None
+        doc_copy = dict(doc)
+        if "_id" in doc_copy:
+            doc_copy["id"] = parse_uuid(doc_copy.pop("_id"))
+        if "user_id" in doc_copy:
+            doc_copy["user_id"] = parse_uuid(doc_copy["user_id"])
+        return cls(**doc_copy)
 
 
-class Cycle(Base):
-    __tablename__ = "cycles"
+class Cycle(BaseDocument):
+    collection_name = "cycles"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False)
-    last_period_date: Mapped[date] = mapped_column(Date, nullable=False)
-    cycle_length: Mapped[int] = mapped_column(Integer, default=28, nullable=False)
-    next_period_prediction: Mapped[date] = mapped_column(Date, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-
-    user: Mapped["User"] = relationship(back_populates="cycles")
+    def __init__(self, **kwargs: Any) -> None:
+        self.user_id: uuid.UUID = parse_uuid(kwargs.pop("user_id", None)) or uuid.uuid4()
+        self.last_period_date: date = parse_date(kwargs.pop("last_period_date", None)) or date.today()
+        self.cycle_length: int = kwargs.pop("cycle_length", 28)
+        raw_next = kwargs.pop("next_period_prediction", None)
+        self.next_period_prediction: date = parse_date(raw_next) or (self.last_period_date + timedelta(days=self.cycle_length))
+        super().__init__(**kwargs)
 
     @classmethod
     def predicted_date(cls, last_period_date: date, cycle_length: int) -> date:
         return last_period_date + timedelta(days=cycle_length)
 
+    @classmethod
+    def from_mongo(cls, doc: dict[str, Any] | None) -> Cycle | None:
+        if not doc:
+            return None
+        doc_copy = dict(doc)
+        if "_id" in doc_copy:
+            doc_copy["id"] = parse_uuid(doc_copy.pop("_id"))
+        if "user_id" in doc_copy:
+            doc_copy["user_id"] = parse_uuid(doc_copy["user_id"])
+        if "last_period_date" in doc_copy:
+            doc_copy["last_period_date"] = parse_date(doc_copy["last_period_date"])
+        if "next_period_prediction" in doc_copy:
+            doc_copy["next_period_prediction"] = parse_date(doc_copy["next_period_prediction"])
+        return cls(**doc_copy)
 
-class Journal(Base):
-    __tablename__ = "journals"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False)
-    title: Mapped[str] = mapped_column(String(255), nullable=False)
-    content: Mapped[str] = mapped_column(Text, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+class Journal(BaseDocument):
+    collection_name = "journals"
 
-    user: Mapped["User"] = relationship(back_populates="journals")
+    def __init__(self, **kwargs: Any) -> None:
+        self.user_id: uuid.UUID = parse_uuid(kwargs.pop("user_id", None)) or uuid.uuid4()
+        self.title: str = kwargs.pop("title", "")
+        self.content: str = kwargs.pop("content", "")
+        super().__init__(**kwargs)
+
+    @classmethod
+    def from_mongo(cls, doc: dict[str, Any] | None) -> Journal | None:
+        if not doc:
+            return None
+        doc_copy = dict(doc)
+        if "_id" in doc_copy:
+            doc_copy["id"] = parse_uuid(doc_copy.pop("_id"))
+        if "user_id" in doc_copy:
+            doc_copy["user_id"] = parse_uuid(doc_copy["user_id"])
+        return cls(**doc_copy)

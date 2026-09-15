@@ -26,8 +26,17 @@ if settings.sentry_dsn:
 limiter = Limiter(key_func=get_remote_address, default_limits=["100/minute"])
 
 
+from app.core.database import Base, engine, init_mongo_indexes
+import app.models  # noqa: F401
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    try:
+        await init_mongo_indexes()
+    except Exception as exc:
+        import logging
+        logging.getLogger(__name__).warning("Database initialization in lifespan warning: %s", exc)
     yield
     await close_redis()
 

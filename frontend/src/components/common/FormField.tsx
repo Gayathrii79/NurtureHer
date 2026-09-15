@@ -35,7 +35,7 @@ export function TextAreaField({
       <textarea
         id={id}
         className={cn(
-          "mt-2 min-h-48 w-full resize-y rounded-[24px] border border-pink-100 bg-white/80 p-4 text-sm text-ink outline-none transition placeholder:text-muted/60 focus:border-primary/50 focus:ring-4 focus:ring-primary/10 dark:border-white/10 dark:bg-white/10 dark:text-white",
+          "mt-2 min-h-48 w-full resize-y rounded-[24px] border border-lavender-200 bg-white/90 p-4 text-sm text-ink outline-none transition placeholder:text-muted/60 focus:border-primary focus:ring-4 focus:ring-primary/15 dark:border-white/10 dark:bg-white/10 dark:text-white",
           className,
         )}
         {...props}

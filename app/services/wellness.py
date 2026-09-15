@@ -1,9 +1,9 @@
 import json
 from datetime import timedelta
+from typing import Any
 from uuid import UUID
 
 from fastapi import status
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppError
 from app.core.redis import redis_client
@@ -16,7 +16,7 @@ from app.schemas.wellness import WellnessInsight, WellnessInsightsRead
 
 
 class WellnessService:
-    def __init__(self, db: AsyncSession) -> None:
+    def __init__(self, db: Any) -> None:
         self.db = db
 
     async def create_mood(self, user: User, payload: MoodCreate):

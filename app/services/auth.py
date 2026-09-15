@@ -1,6 +1,6 @@
-from fastapi import status
-from sqlalchemy.ext.asyncio import AsyncSession
+from typing import Any
 from uuid import UUID
+from fastapi import status
 
 from app.core.exceptions import AppError
 from app.core.security import decode_token, hash_password, verify_password
@@ -12,7 +12,7 @@ from app.utils.passwords import validate_password_policy
 
 
 class AuthService:
-    def __init__(self, db: AsyncSession) -> None:
+    def __init__(self, db: Any) -> None:
         self.db = db
         self.users = UserRepository(db)
 

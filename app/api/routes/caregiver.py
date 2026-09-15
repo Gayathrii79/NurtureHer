@@ -11,7 +11,7 @@ from app.schemas.health import CaregiverContentCreate, CaregiverContentRead, Car
 from app.services.health import CaregiverService
 
 router = APIRouter(prefix="/caregiver", tags=["Caregiver"])
-caregiver_access = Depends(require_roles(UserRole.CAREGIVER, UserRole.ADMIN, UserRole.ASHA_WORKER))
+caregiver_access = Depends(require_roles(UserRole.MOTHER, UserRole.CAREGIVER, UserRole.ADMIN, UserRole.ASHA_WORKER))
 admin_access = Depends(require_roles(UserRole.ADMIN))
 
 

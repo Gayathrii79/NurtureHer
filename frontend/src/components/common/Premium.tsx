@@ -89,8 +89,8 @@ export function Gauge({ value, label }: { value: number; label: string }) {
   return (
     <div className="mx-auto w-full max-w-xs">
       <div className="relative h-32 overflow-hidden">
-        <div className="absolute inset-x-0 top-0 h-64 rounded-full bg-gradient-to-r from-emerald-400 via-amber-400 to-rose-500 p-4">
-          <div className="h-full rounded-full bg-white dark:bg-[#2a1d2f]" />
+        <div className="absolute inset-x-0 top-0 h-64 rounded-full bg-gradient-to-r from-teal via-amber to-danger p-4">
+          <div className="h-full rounded-full bg-white dark:bg-[#1A1333]" />
         </div>
         <div className="absolute bottom-0 left-1/2 h-1 w-[42%] origin-left rounded-full bg-ink shadow-card transition dark:bg-white" style={{ transform: `rotate(${degrees}deg)` }} />
         <div className="absolute bottom-0 left-1/2 h-4 w-4 -translate-x-1/2 rounded-full bg-primary shadow-glow" />
@@ -103,7 +103,7 @@ export function Gauge({ value, label }: { value: number; label: string }) {
 
 export function ProgressRow({ label, value, detail }: { label: string; value: number; detail?: string }) {
   return (
-    <div className="rounded-[18px] bg-pink-50/70 p-4 dark:bg-white/10">
+    <div className="rounded-[18px] bg-lavender-50/90 border border-lavender-200/50 p-4 dark:bg-white/5 dark:border-white/10">
       <div className="mb-2 flex items-center justify-between gap-3">
         <p className="text-sm font-black text-ink dark:text-white">{label}</p>
         <p className="text-sm font-black text-primary">{value}%</p>
@@ -121,10 +121,10 @@ export function Timeline({ items }: { items: { id?: string; title: string; detai
         <div key={item.id ?? `${item.title}-${item.time}-${index}`} className="grid grid-cols-[28px_1fr] gap-3">
           <div className="flex flex-col items-center">
             <span className="h-3 w-3 rounded-full bg-gradient-to-br from-primary to-accent shadow-glow" />
-            {index < items.length - 1 ? <span className="mt-2 h-full min-h-10 w-px bg-pink-100 dark:bg-white/10" /> : null}
+            {index < items.length - 1 ? <span className="mt-2 h-full min-h-10 w-px bg-lavender-200 dark:bg-white/10" /> : null}
           </div>
-          <div className="rounded-[18px] bg-pink-50/80 p-4 dark:bg-white/10">
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary/70">{item.time}</p>
+          <div className="rounded-[18px] bg-lavender-50/90 border border-lavender-200/60 p-4 dark:bg-white/5 dark:border-white/10">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary/80">{item.time}</p>
             <h3 className="mt-1 font-black text-ink dark:text-white">{item.title}</h3>
             <p className="mt-1 text-sm leading-6 text-muted dark:text-white/60">{item.detail}</p>
           </div>
@@ -150,12 +150,12 @@ export function DataTable({
       <SectionHeader title={title} subtitle={subtitle} />
       <div className="overflow-x-auto">
         <table className="w-full min-w-[520px] text-left text-sm">
-          <thead className="text-muted dark:text-white/50">
+          <thead className="text-muted dark:text-white/50 border-b border-lavender-200/70 dark:border-white/10">
             <tr>{columns.map((column) => <th key={column} className="pb-3 font-black capitalize">{column}</th>)}</tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-lavender-100 dark:divide-white/5">
             {rows.map((row, index) => (
-              <tr key={index} className="border-t border-pink-50 transition hover:bg-pink-50/60 dark:border-white/10 dark:hover:bg-white/5">
+              <tr key={index} className="transition hover:bg-lavender-50/80 dark:hover:bg-white/5">
                 {columns.map((column) => (
                   <td key={column} className="py-4 font-semibold text-ink dark:text-white">{row[column]}</td>
                 ))}

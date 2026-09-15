@@ -5,9 +5,7 @@ from uuid import UUID
 from fastapi import Depends, Header, Query, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.core.database import get_db
+from app.core.database import MongoDatabaseWrapper, get_db
 from app.core.exceptions import AppError
 from app.core.security import UserRole, decode_token
 from app.models.user import User
@@ -18,7 +16,7 @@ bearer_scheme = HTTPBearer(auto_error=False)
 
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
-    db: AsyncSession = Depends(get_db),
+    db: MongoDatabaseWrapper = Depends(get_db),
 ) -> User:
     if credentials is None:
         raise AppError("Authentication credentials were not provided", status.HTTP_401_UNAUTHORIZED)

@@ -1,16 +1,17 @@
-from app.models.user import User
-from sqlalchemy.ext.asyncio import AsyncSession
+﻿from __future__ import annotations
 
+from typing import Any
+from app.models.user import User
 from app.rag.context_builder import HealthContextBuilder
 
 
 class RAGService:
-    def __init__(self, db: AsyncSession | None = None) -> None:
+    def __init__(self, db: Any = None) -> None:
         self.context_builder = HealthContextBuilder(db)
 
-    async def build_context(self, user: User, message: str, language: str) -> tuple[str, str]:
+    async def build_context(self, user: User, message: str, language: str) -> tuple[str, str, list[dict[str, Any]]]:
         return await self.context_builder.build(user, message, language)
 
     async def retrieve_context(self, user: User, message: str) -> str:
-        retrieved_context, user_context = await self.build_context(user, message, user.preferred_language)
+        retrieved_context, user_context, _ = await self.build_context(user, message, user.preferred_language)
         return f"{retrieved_context}\n\nPersonalized user context:\n{user_context}"

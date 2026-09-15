@@ -1,7 +1,6 @@
 from datetime import datetime, timedelta, timezone
+from typing import Any
 from uuid import UUID, uuid4
-
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.redis import redis_client
@@ -12,7 +11,7 @@ from app.schemas.auth import TokenPair
 
 
 class TokenService:
-    def __init__(self, db: AsyncSession) -> None:
+    def __init__(self, db: Any) -> None:
         self.db = db
         self.refresh_tokens = RefreshTokenRepository(db)
 

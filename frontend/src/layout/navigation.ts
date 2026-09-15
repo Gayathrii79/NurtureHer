@@ -6,25 +6,30 @@ import {
   BookOpen,
   Bot,
   CalendarDays,
+  FileSpreadsheet,
   FileText,
   HeartPulse,
   Home,
   LifeBuoy,
   LogOut,
+  LucideIcon,
   MessageCircle,
   Moon,
+  QrCode,
   Settings,
+  Shield,
   ShieldAlert,
+  ShieldCheck,
   Sparkles,
+  Stethoscope,
   User,
   Users,
   Utensils,
-  LucideIcon,
 } from "lucide-react";
 import { TranslationSchema } from "@/i18n/types";
 
 export interface NavItem {
-  key: keyof TranslationSchema["nav"] | string;
+  key: string;
   label: string;
   path: string;
   icon: LucideIcon;
@@ -35,7 +40,122 @@ export interface NavSection {
   items: NavItem[];
 }
 
-export function getNavigationSections(t: TranslationSchema): NavSection[] {
+export function getNavigationSections(t: TranslationSchema, role = "mother"): NavSection[] {
+  const normalizedRole = role?.toLowerCase() || "mother";
+
+  if (normalizedRole === "doctor") {
+    return [
+      {
+        title: "Clinical Practice",
+        items: [
+          { key: "doctor", label: "Doctor Dashboard", path: "/doctor", icon: Stethoscope },
+          { key: "reports", label: "Reports Zone", path: "/reports", icon: BarChart3 },
+          { key: "coach", label: "AI Clinical Assistant", path: "/coach", icon: Bot },
+        ],
+      },
+      {
+        title: "Clinical Guidance",
+        items: [
+          { key: "nutrition", label: "Nutrition Standards", path: "/nutrition", icon: Utensils },
+          { key: "emergency", label: "Emergency Protocols", path: "/emergency", icon: LifeBuoy },
+        ],
+      },
+      {
+        title: t.nav.sections.account,
+        items: [
+          { key: "profile", label: t.nav.profile, path: "/profile", icon: User },
+          { key: "settings", label: t.nav.settings, path: "/settings", icon: Settings },
+          { key: "logout", label: t.nav.logout, path: "/logout", icon: LogOut },
+        ],
+      },
+    ];
+  }
+
+  if (normalizedRole === "admin") {
+    return [
+      {
+        title: "Governance & Systems",
+        items: [
+          { key: "admin", label: "Admin Console", path: "/admin", icon: Shield },
+          { key: "reports", label: "System Analytics", path: "/reports", icon: BarChart3 },
+          { key: "asha", label: "ASHA Dispatch", path: "/asha", icon: Users },
+        ],
+      },
+      {
+        title: "Platform Tools",
+        items: [
+          { key: "coach", label: "AI Testbed", path: "/coach", icon: Bot },
+          { key: "emergency", label: "Emergency Gateway", path: "/emergency", icon: LifeBuoy },
+        ],
+      },
+      {
+        title: t.nav.sections.account,
+        items: [
+          { key: "profile", label: t.nav.profile, path: "/profile", icon: User },
+          { key: "settings", label: t.nav.settings, path: "/settings", icon: Settings },
+          { key: "logout", label: t.nav.logout, path: "/logout", icon: LogOut },
+        ],
+      },
+    ];
+  }
+
+  if (normalizedRole === "asha_worker") {
+    return [
+      {
+        title: "Field Health Queue",
+        items: [
+          { key: "asha", label: "ASHA Queue", path: "/asha", icon: Users },
+          { key: "reports", label: "Community Reports", path: "/reports", icon: BarChart3 },
+          { key: "coach", label: "Field Coach", path: "/coach", icon: Bot },
+        ],
+      },
+      {
+        title: "Maternal Support",
+        items: [
+          { key: "nutrition", label: "Nutrition Guide", path: "/nutrition", icon: Utensils },
+          { key: "emergency", label: "112 Emergency Help", path: "/emergency", icon: LifeBuoy },
+        ],
+      },
+      {
+        title: t.nav.sections.account,
+        items: [
+          { key: "profile", label: t.nav.profile, path: "/profile", icon: User },
+          { key: "settings", label: t.nav.settings, path: "/settings", icon: Settings },
+          { key: "logout", label: t.nav.logout, path: "/logout", icon: LogOut },
+        ],
+      },
+    ];
+  }
+
+  if (normalizedRole === "caregiver") {
+    return [
+      {
+        title: "Care Companion",
+        items: [
+          { key: "caregiver", label: "Caregiver Companion", path: "/caregiver", icon: Baby },
+          { key: "carecircle", label: "CareCircle TrustVault", path: "/carecircle", icon: QrCode },
+          { key: "coach", label: "Family Coach", path: "/coach", icon: Bot },
+        ],
+      },
+      {
+        title: "Wellness & Safety",
+        items: [
+          { key: "nutrition", label: "Nutrition Guide", path: "/nutrition", icon: Utensils },
+          { key: "emergency", label: "Emergency SOS", path: "/emergency", icon: LifeBuoy },
+        ],
+      },
+      {
+        title: t.nav.sections.account,
+        items: [
+          { key: "profile", label: t.nav.profile, path: "/profile", icon: User },
+          { key: "settings", label: t.nav.settings, path: "/settings", icon: Settings },
+          { key: "logout", label: t.nav.logout, path: "/logout", icon: LogOut },
+        ],
+      },
+    ];
+  }
+
+  // Default: Mother role
   return [
     {
       title: t.nav.sections.overview,
@@ -54,6 +174,8 @@ export function getNavigationSections(t: TranslationSchema): NavSection[] {
         { key: "ppd", label: t.nav.ppd, path: "/ppd", icon: ShieldAlert },
         { key: "journal", label: t.nav.journal, path: "/journal", icon: Moon },
         { key: "nutrition", label: t.nav.nutrition, path: "/nutrition", icon: Utensils },
+        { key: "doctorVisit", label: "Doctor-Visit Prep", path: "/doctor-visit", icon: Stethoscope },
+        { key: "carecircle", label: "CareCircle QR Vault", path: "/carecircle", icon: QrCode },
         { key: "caregiver", label: t.nav.caregiver, path: "/caregiver", icon: Baby },
         { key: "emergency", label: t.nav.emergency, path: "/emergency", icon: LifeBuoy },
       ],
@@ -61,8 +183,7 @@ export function getNavigationSections(t: TranslationSchema): NavSection[] {
     {
       title: t.nav.sections.teamRecords,
       items: [
-        { key: "asha", label: t.nav.asha, path: "/asha", icon: Users },
-        { key: "reports", label: t.nav.reports, path: "/reports", icon: BarChart3 },
+        { key: "reports", label: "Reports Zone", path: "/reports", icon: BarChart3 },
         { key: "profile", label: t.nav.profile, path: "/profile", icon: User },
       ],
     },
@@ -86,10 +207,14 @@ export const navigation = [
   { label: "PPD Detection", path: "/ppd", icon: ShieldAlert },
   { label: "Mood Journal", path: "/journal", icon: Moon },
   { label: "Nutrition Guide", path: "/nutrition", icon: Utensils },
+  { label: "AI Doctor-Visit Prep", path: "/doctor-visit", icon: Stethoscope },
+  { label: "CareCircle QR Vault", path: "/carecircle", icon: QrCode },
   { label: "Caregiver Zone", path: "/caregiver", icon: Baby },
   { label: "Emergency Help", path: "/emergency", icon: LifeBuoy },
   { label: "ASHA Dashboard", path: "/asha", icon: Users },
-  { label: "Reports & Analytics", path: "/reports", icon: BarChart3 },
+  { label: "Reports Zone", path: "/reports", icon: BarChart3 },
+  { label: "Doctor Portal", path: "/doctor", icon: Stethoscope },
+  { label: "Admin Console", path: "/admin", icon: Shield },
   { label: "Profile", path: "/profile", icon: User },
   { label: "Settings", path: "/settings", icon: Settings },
   { label: "Logout", path: "/logout", icon: LogOut },
@@ -102,15 +227,15 @@ export const navigationSections = [
   },
   {
     title: "Care Tools",
-    items: navigation.slice(4, 11),
+    items: navigation.slice(4, 13),
   },
   {
     title: "Team & Records",
-    items: navigation.slice(11, 14),
+    items: navigation.slice(13, 17),
   },
   {
     title: "Account",
-    items: navigation.slice(14),
+    items: navigation.slice(17),
   },
 ];
 

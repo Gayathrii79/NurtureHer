@@ -12,6 +12,7 @@ class UserRole(str, Enum):
     MOTHER = "mother"
     CAREGIVER = "caregiver"
     ASHA_WORKER = "asha_worker"
+    DOCTOR = "doctor"
     ADMIN = "admin"
 
 

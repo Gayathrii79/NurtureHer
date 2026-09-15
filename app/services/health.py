@@ -1,8 +1,7 @@
+from typing import Any
 from uuid import UUID
 
 from fastapi import status
-from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppError
 from app.ml.prediction_service import PCOSPredictionService
@@ -18,7 +17,7 @@ from app.services.risk import RiskService
 
 
 class PCOSService:
-    def __init__(self, db: AsyncSession) -> None:
+    def __init__(self, db: Any) -> None:
         self.db = db
         self.prediction_service = PCOSPredictionService()
 
@@ -39,7 +38,7 @@ class PCOSService:
 
 
 class PPDService:
-    def __init__(self, db: AsyncSession) -> None:
+    def __init__(self, db: Any) -> None:
         self.db = db
         self.detector = PPDRiskDetectionService()
 
@@ -63,7 +62,7 @@ ChatService = ChatbotService
 
 
 class CaregiverService:
-    def __init__(self, db: AsyncSession) -> None:
+    def __init__(self, db: Any) -> None:
         self.db = db
 
     async def content(self, category: str, limit: int = 50, offset: int = 0) -> list[CaregiverContent]:
@@ -99,7 +98,7 @@ class CaregiverService:
 
 
 class AshaService:
-    def __init__(self, db: AsyncSession) -> None:
+    def __init__(self, db: Any) -> None:
         self.db = db
 
     async def high_risk_cases(
@@ -136,7 +135,8 @@ class AshaService:
         return case
 
     async def statistics(self) -> dict[str, int]:
-        total = await self.db.scalar(select(func.count()).select_from(HighRiskCase))
-        high = await self.db.scalar(select(func.count()).select_from(HighRiskCase).where(HighRiskCase.risk_level == RiskLevel.HIGH))
-        moderate = await self.db.scalar(select(func.count()).select_from(HighRiskCase).where(HighRiskCase.risk_level == RiskLevel.MODERATE))
-        return {"total_cases": total or 0, "high_risk": high or 0, "moderate_risk": moderate or 0}
+        col = getattr(self.db, "high_risk_cases", None) or self.db["high_risk_cases"]
+        total = await col.count_documents({"deleted_at": None})
+        high = await col.count_documents({"risk_level": "high", "deleted_at": None})
+        moderate = await col.count_documents({"risk_level": "moderate", "deleted_at": None})
+        return {"total_cases": total, "high_risk": high, "moderate_risk": moderate}

@@ -16,7 +16,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(await api.me());
   }
 
-  async function signUp(payload: { email: string; name: string; password: string; phone?: string; preferred_language?: string }) {
+  async function signUp(payload: { email: string; name: string; password: string; phone?: string; role?: string; preferred_language?: string }) {
     await api.register(payload);
     await signIn(payload.email, payload.password);
   }

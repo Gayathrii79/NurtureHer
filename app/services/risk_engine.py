@@ -1,16 +1,16 @@
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from typing import Any
 
 from app.core.constants import HIGH_RISK_PCOS_THRESHOLD, HIGH_RISK_PPD_LEVELS
 from app.models.enums import RiskLevel
-from app.models.user import MotherProfile, User
+from app.models.user import User
 from app.repositories.health import HighRiskRepository
+from app.repositories.mother_profiles import MotherProfileRepository
 from app.repositories.users import UserRepository
 from app.services.notification import NotificationService
 
 
 class HighRiskEngine:
-    def __init__(self, db: AsyncSession) -> None:
+    def __init__(self, db: Any) -> None:
         self.db = db
         self.notifications = NotificationService(db)
 
@@ -22,7 +22,7 @@ class HighRiskEngine:
         if not should_create:
             return False
 
-        mother_profile = await self.db.scalar(select(MotherProfile).where(MotherProfile.user_id == user.id))
+        mother_profile = await MotherProfileRepository(self.db).get_by_user_id(user.id)
         district = mother_profile.district if mother_profile else None
         asha_workers = await UserRepository(self.db).asha_workers(district=district, limit=1)
         assigned_worker = asha_workers[0] if asha_workers else None

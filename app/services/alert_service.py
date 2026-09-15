@@ -1,11 +1,11 @@
-from sqlalchemy.ext.asyncio import AsyncSession
+from typing import Any
 
 from app.models.user import User
 from app.services.notification import NotificationService
 
 
 class AlertService:
-    def __init__(self, db: AsyncSession) -> None:
+    def __init__(self, db: Any) -> None:
         self.db = db
         self.notifications = NotificationService(db)
 

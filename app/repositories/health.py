@@ -1,51 +1,80 @@
-from uuid import UUID
+﻿from __future__ import annotations
 
-from sqlalchemy import desc, or_, select
+import re
+from typing import Any
+from uuid import UUID
+import pymongo
 
 from app.models.asha import Alert, HighRiskCase
 from app.models.caregiver import CaregiverContent
 from app.models.chat import ChatMessage
+from app.models.doctor import DoctorNote, DoctorPatient
 from app.models.enums import CaseStatus, RiskLevel
 from app.models.pcos import PCOSPrediction
 from app.models.ppd import PPDAssessment
-from app.models.user import MotherProfile, User
 from app.repositories.base import BaseRepository
 
 
 class PCOSRepository(BaseRepository[PCOSPrediction]):
     model = PCOSPrediction
 
-    async def for_user(self, user_id: UUID, limit: int = 50, offset: int = 0) -> list[PCOSPrediction]:
-        return await self.paginated(select(PCOSPrediction).where(PCOSPrediction.user_id == user_id).order_by(desc(PCOSPrediction.created_at)), limit, offset)
+    async def for_user(self, user_id: UUID | str, limit: int = 50, offset: int = 0) -> list[PCOSPrediction]:
+        return await self.paginated(
+            filter_query={"user_id": str(user_id)},
+            limit=limit,
+            offset=offset,
+            sort=[("created_at", pymongo.DESCENDING)],
+        )
 
-    async def latest_for_user(self, user_id: UUID) -> PCOSPrediction | None:
-        result = await self.db.execute(select(PCOSPrediction).where(PCOSPrediction.user_id == user_id).order_by(desc(PCOSPrediction.created_at)).limit(1))
-        return result.scalar_one_or_none()
+    async def latest_for_user(self, user_id: UUID | str) -> PCOSPrediction | None:
+        doc = await self.collection.find_one(
+            {"user_id": str(user_id), "deleted_at": None},
+            sort=[("created_at", pymongo.DESCENDING)],
+        )
+        return self.model.from_mongo(doc)
 
 
 class PPDRepository(BaseRepository[PPDAssessment]):
     model = PPDAssessment
 
-    async def for_user(self, user_id: UUID, limit: int = 50, offset: int = 0) -> list[PPDAssessment]:
-        return await self.paginated(select(PPDAssessment).where(PPDAssessment.user_id == user_id).order_by(desc(PPDAssessment.created_at)), limit, offset)
+    async def for_user(self, user_id: UUID | str, limit: int = 50, offset: int = 0) -> list[PPDAssessment]:
+        return await self.paginated(
+            filter_query={"user_id": str(user_id)},
+            limit=limit,
+            offset=offset,
+            sort=[("created_at", pymongo.DESCENDING)],
+        )
 
-    async def latest_for_user(self, user_id: UUID) -> PPDAssessment | None:
-        result = await self.db.execute(select(PPDAssessment).where(PPDAssessment.user_id == user_id).order_by(desc(PPDAssessment.created_at)).limit(1))
-        return result.scalar_one_or_none()
+    async def latest_for_user(self, user_id: UUID | str) -> PPDAssessment | None:
+        doc = await self.collection.find_one(
+            {"user_id": str(user_id), "deleted_at": None},
+            sort=[("created_at", pymongo.DESCENDING)],
+        )
+        return self.model.from_mongo(doc)
 
 
 class ChatRepository(BaseRepository[ChatMessage]):
     model = ChatMessage
 
-    async def for_user(self, user_id: UUID, limit: int = 50, offset: int = 0) -> list[ChatMessage]:
-        return await self.paginated(select(ChatMessage).where(ChatMessage.user_id == user_id).order_by(desc(ChatMessage.created_at)), limit, offset)
+    async def for_user(self, user_id: UUID | str, limit: int = 50, offset: int = 0) -> list[ChatMessage]:
+        return await self.paginated(
+            filter_query={"user_id": str(user_id)},
+            limit=limit,
+            offset=offset,
+            sort=[("created_at", pymongo.DESCENDING)],
+        )
 
 
 class CaregiverContentRepository(BaseRepository[CaregiverContent]):
     model = CaregiverContent
 
     async def by_category(self, category: str, limit: int = 50, offset: int = 0) -> list[CaregiverContent]:
-        return await self.paginated(select(CaregiverContent).where(CaregiverContent.category == category).order_by(desc(CaregiverContent.created_at)), limit, offset)
+        return await self.paginated(
+            filter_query={"category": category},
+            limit=limit,
+            offset=offset,
+            sort=[("created_at", pymongo.DESCENDING)],
+        )
 
 
 class HighRiskRepository(BaseRepository[HighRiskCase]):
@@ -63,33 +92,87 @@ class HighRiskRepository(BaseRepository[HighRiskCase]):
         limit: int = 50,
         offset: int = 0,
     ) -> list[HighRiskCase]:
-        stmt = select(HighRiskCase).join(User, User.id == HighRiskCase.user_id).outerjoin(MotherProfile, MotherProfile.user_id == User.id).order_by(desc(HighRiskCase.created_at))
+        query: dict[str, Any] = {"deleted_at": None}
         if risk_level:
-            stmt = stmt.where(HighRiskCase.risk_level == risk_level)
+            query["risk_level"] = risk_level.value if isinstance(risk_level, RiskLevel) else str(risk_level)
         if status:
-            stmt = stmt.where(HighRiskCase.status == status)
+            query["status"] = status.value if isinstance(status, CaseStatus) else str(status)
         if risk_type:
-            stmt = stmt.where(HighRiskCase.risk_type == risk_type)
+            query["risk_type"] = str(risk_type)
         if assigned_worker_id:
-            stmt = stmt.where(HighRiskCase.assigned_worker_id == assigned_worker_id)
-        if district:
-            stmt = stmt.where(MotherProfile.district.ilike(f"%{district}%"))
-        if village:
-            stmt = stmt.where(MotherProfile.village.ilike(f"%{village}%"))
+            query["assigned_worker_id"] = str(assigned_worker_id)
+
+        # If filtering by patient user fields (district, village, search)
+        user_col = getattr(self.db, "users", None) or self.db["users"]
+        mother_col = getattr(self.db, "mother_profiles", None) or self.db["mother_profiles"]
+
+        user_filter: dict[str, Any] = {}
         if search:
-            pattern = f"%{search}%"
-            stmt = stmt.where(or_(User.name.ilike(pattern), User.email.ilike(pattern), User.phone.ilike(pattern)))
-        return await self.paginated(stmt, limit, offset)
+            rgx = re.compile(re.escape(search), re.IGNORECASE)
+            user_filter["$or"] = [{"name": rgx}, {"email": rgx}, {"phone": rgx}]
+        if user_filter:
+            user_ids = [str(d["_id"]) for d in await user_col.find(user_filter, {"_id": 1}).to_list(1000)]
+            query["user_id"] = {"$in": user_ids}
+
+        if district or village:
+            prof_filter: dict[str, Any] = {}
+            if district:
+                prof_filter["district"] = re.compile(re.escape(district), re.IGNORECASE)
+            if village:
+                prof_filter["village"] = re.compile(re.escape(village), re.IGNORECASE)
+            prof_ids = [str(d["user_id"]) for d in await mother_col.find(prof_filter, {"user_id": 1}).to_list(1000)]
+            if "user_id" in query and "$in" in query["user_id"]:
+                query["user_id"]["$in"] = list(set(query["user_id"]["$in"]).intersection(prof_ids))
+            else:
+                query["user_id"] = {"$in": prof_ids}
+
+        cursor = self.collection.find(query).sort("created_at", pymongo.DESCENDING).skip(offset).limit(limit)
+        docs = await cursor.to_list(length=limit)
+        return [self.model.from_mongo(doc) for doc in docs if doc]
 
 
 class AlertRepository(BaseRepository[Alert]):
     model = Alert
 
-    async def for_user(self, user_id: UUID, limit: int = 50, offset: int = 0) -> list[Alert]:
-        return await self.paginated(select(Alert).where(Alert.user_id == user_id).order_by(desc(Alert.created_at)), limit, offset)
+    async def for_user(self, user_id: UUID | str, limit: int = 50, offset: int = 0) -> list[Alert]:
+        return await self.paginated(
+            filter_query={"user_id": str(user_id)},
+            limit=limit,
+            offset=offset,
+            sort=[("created_at", pymongo.DESCENDING)],
+        )
 
     async def all_alerts(self, status: str | None = None, limit: int = 50, offset: int = 0) -> list[Alert]:
-        stmt = select(Alert).order_by(desc(Alert.created_at))
+        query: dict[str, Any] = {}
         if status:
-            stmt = stmt.where(Alert.sent_status == status)
-        return await self.paginated(stmt, limit, offset)
+            query["sent_status"] = status
+        return await self.paginated(
+            filter_query=query,
+            limit=limit,
+            offset=offset,
+            sort=[("created_at", pymongo.DESCENDING)],
+        )
+
+
+class DoctorPatientRepository(BaseRepository[DoctorPatient]):
+    model = DoctorPatient
+
+    async def for_doctor(self, doctor_id: UUID | str, limit: int = 50, offset: int = 0) -> list[DoctorPatient]:
+        return await self.paginated(
+            filter_query={"doctor_id": str(doctor_id)},
+            limit=limit,
+            offset=offset,
+            sort=[("created_at", pymongo.DESCENDING)],
+        )
+
+
+class DoctorNoteRepository(BaseRepository[DoctorNote]):
+    model = DoctorNote
+
+    async def for_patient(self, patient_id: UUID | str, limit: int = 50, offset: int = 0) -> list[DoctorNote]:
+        return await self.paginated(
+            filter_query={"patient_id": str(patient_id)},
+            limit=limit,
+            offset=offset,
+            sort=[("created_at", pymongo.DESCENDING)],
+        )

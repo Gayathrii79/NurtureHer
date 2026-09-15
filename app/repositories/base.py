@@ -1,11 +1,10 @@
-from __future__ import annotations
-
-from typing import Generic, TypeVar
-from uuid import UUID
+﻿from __future__ import annotations
 
 from datetime import datetime, timezone
-from sqlalchemy import Select, select
-from sqlalchemy.ext.asyncio import AsyncSession
+from typing import Any, Generic, TypeVar
+from uuid import UUID
+
+from app.core.database import MongoDatabaseWrapper
 
 ModelT = TypeVar("ModelT")
 
@@ -13,48 +12,69 @@ ModelT = TypeVar("ModelT")
 class BaseRepository(Generic[ModelT]):
     model: type[ModelT]
 
-    def __init__(self, db: AsyncSession) -> None:
+    def __init__(self, db: MongoDatabaseWrapper | Any) -> None:
         self.db = db
+        collection_name = getattr(self.model, "collection_name", None) or f"{self.model.__name__.lower()}s"
+        self.collection = getattr(db, collection_name, None)
+        if self.collection is None and hasattr(db, "get_collection"):
+            self.collection = db.get_collection(collection_name)
+        elif self.collection is None and hasattr(db, "__getitem__"):
+            self.collection = db[collection_name]
 
-    async def get(self, obj_id: UUID) -> ModelT | None:
-        obj = await self.db.get(self.model, obj_id)
-        if obj is not None and getattr(obj, "deleted_at", None) is not None:
+    async def get(self, obj_id: UUID | str) -> ModelT | None:
+        if not obj_id:
             return None
-        return obj
+        doc = await self.collection.find_one({"_id": str(obj_id), "deleted_at": None})
+        if not doc:
+            return None
+        return self.model.from_mongo(doc)
 
-    async def list(self, stmt: Select | None = None) -> list[ModelT]:
-        query = stmt or select(self.model)
-        if hasattr(self.model, "deleted_at"):
-            query = query.where(self.model.deleted_at.is_(None))
-        result = await self.db.execute(query)
-        return list(result.scalars().all())
+    async def list(self, filter_query: dict[str, Any] | None = None, sort: list[tuple[str, int]] | None = None) -> list[ModelT]:
+        query: dict[str, Any] = {"deleted_at": None}
+        if isinstance(filter_query, dict):
+            query.update(filter_query)
+        cursor = self.collection.find(query)
+        if sort:
+            cursor = cursor.sort(sort)
+        docs = await cursor.to_list(length=1000)
+        return [self.model.from_mongo(doc) for doc in docs if doc]
 
-    async def paginated(self, stmt: Select | None, limit: int, offset: int) -> list[ModelT]:
-        query = stmt or select(self.model)
-        if hasattr(self.model, "deleted_at"):
-            query = query.where(self.model.deleted_at.is_(None))
-        query = query.limit(limit).offset(offset)
-        result = await self.db.execute(query)
-        return list(result.scalars().all())
+    async def paginated(
+        self,
+        filter_query: dict[str, Any] | None = None,
+        limit: int = 50,
+        offset: int = 0,
+        sort: list[tuple[str, int]] | None = None,
+    ) -> list[ModelT]:
+        query: dict[str, Any] = {"deleted_at": None}
+        if isinstance(filter_query, dict):
+            query.update(filter_query)
+        cursor = self.collection.find(query)
+        if sort:
+            cursor = cursor.sort(sort)
+        cursor = cursor.skip(offset).limit(limit)
+        docs = await cursor.to_list(length=limit)
+        return [self.model.from_mongo(doc) for doc in docs if doc]
 
-    async def create(self, **data) -> ModelT:
+    async def create(self, **data: Any) -> ModelT:
         obj = self.model(**data)
-        self.db.add(obj)
-        await self.db.flush()
-        await self.db.refresh(obj)
+        doc = obj.to_mongo()
+        await self.collection.insert_one(doc)
         return obj
 
-    async def update(self, obj: ModelT, **data) -> ModelT:
+    async def update(self, obj: ModelT, **data: Any) -> ModelT:
         for key, value in data.items():
             if value is not None:
                 setattr(obj, key, value)
-        await self.db.flush()
-        await self.db.refresh(obj)
+        obj.updated_at = datetime.now(timezone.utc)
+        doc = obj.to_mongo()
+        await self.collection.update_one({"_id": str(obj.id)}, {"$set": doc})
         return obj
 
-    async def delete(self, obj: ModelT) -> None:
-        if hasattr(obj, "deleted_at"):
-            setattr(obj, "deleted_at", datetime.now(timezone.utc))
+    async def delete(self, obj: ModelT, soft: bool = True) -> None:
+        if soft:
+            now = datetime.now(timezone.utc)
+            setattr(obj, "deleted_at", now)
+            await self.collection.update_one({"_id": str(obj.id)}, {"$set": {"deleted_at": now}})
         else:
-            await self.db.delete(obj)
-        await self.db.flush()
+            await self.collection.delete_one({"_id": str(obj.id)})

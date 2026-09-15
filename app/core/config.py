@@ -10,6 +10,8 @@ class Settings(BaseSettings):
     project_name: str = "NurtureHer"
     environment: str = "development"
     api_v1_prefix: str = "/api/v1"
+    mongodb_url: str = "mongodb://localhost:27017"
+    mongodb_db_name: str = "nurtureher"
     database_url: str = "postgresql+asyncpg://nurtureher:nurtureher@localhost:5432/nurtureher"
     sync_database_url: str = "postgresql://nurtureher:nurtureher@localhost:5432/nurtureher"
     redis_url: str = "redis://localhost:6379/0"
