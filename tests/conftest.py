@@ -18,5 +18,7 @@ def high_pcos_payload() -> PCOSPredictRequest:
 
 @pytest.fixture
 def moderate_ppd_payload() -> PPDAssessmentRequest:
-    return PPDAssessmentRequest(answers=[1, 1, 1, 1, 1, 1, 1, 1, 1, 1], journal_text="I feel tired and alone")
+    # EPDS = 10 (moderate follow-up band) with item 10 (self-harm) left at 0 so the
+    # case is genuinely moderate rather than escalated to HIGH by an item-10 endorsement.
+    return PPDAssessmentRequest(answers=[1, 1, 1, 1, 1, 1, 1, 1, 2, 0], journal_text="I feel tired and alone")
 

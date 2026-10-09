@@ -1,12 +1,9 @@
 import { useEffect, useState, useMemo } from "react";
 import {
   Activity,
-  AlertTriangle,
-  Calendar,
   CheckCircle,
   Clock,
   Download,
-  FileText,
   HeartPulse,
   Mail,
   Phone,

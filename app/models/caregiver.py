@@ -1,25 +1,19 @@
-﻿from __future__ import annotations
+import uuid
+from datetime import datetime
 
-from typing import Any
+from sqlalchemy import DateTime, String, Text, func
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import BaseDocument, parse_uuid
+from app.core.database import Base
 
 
-class CaregiverContent(BaseDocument):
-    collection_name = "caregiver_content"
+class CaregiverContent(Base):
+    __tablename__ = "caregiver_content"
 
-    def __init__(self, **kwargs: Any) -> None:
-        self.title: str = kwargs.pop("title", "")
-        self.description: str = kwargs.pop("description", "")
-        self.video_url: str | None = kwargs.pop("video_url", None)
-        self.category: str = kwargs.pop("category", "tip")
-        super().__init__(**kwargs)
-
-    @classmethod
-    def from_mongo(cls, doc: dict[str, Any] | None) -> CaregiverContent | None:
-        if not doc:
-            return None
-        doc_copy = dict(doc)
-        if "_id" in doc_copy:
-            doc_copy["id"] = parse_uuid(doc_copy.pop("_id"))
-        return cls(**doc_copy)
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    video_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    category: Mapped[str] = mapped_column(String(80), index=True, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)

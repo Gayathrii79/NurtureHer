@@ -1,6 +1,7 @@
-import { LifeBuoy, Moon, PhoneCall, Sun } from "lucide-react";
+import { Bell, Moon, PhoneCall, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { api, Alert } from "@/lib/api";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { LanguageSelector } from "@/components/common/LanguageSelector";
@@ -12,6 +13,18 @@ export function Topbar() {
   const { t } = useLanguage();
   const navigate = useNavigate();
   const [dark, setDark] = useState(() => localStorage.getItem("nurtureher_theme") === "dark");
+  const [alerts, setAlerts] = useState<Alert[] | null>(null);
+  const [alertsOpen, setAlertsOpen] = useState(false);
+
+  useEffect(() => {
+    // Real unread-style bell: the count is the caller's own alert list from GET /notifications.
+    api
+      .notifications()
+      .then(setAlerts)
+      .catch(() => setAlerts([]));
+  }, []);
+
+  const alertCount = alerts?.length ?? 0;
   const initials =
     user?.name
       .split(/\s+/)
@@ -43,11 +56,59 @@ export function Topbar() {
             type="button"
             onClick={() => navigate("/emergency")}
             className="flex h-10 items-center gap-1.5 rounded-2xl border border-rose-200 bg-rose-50/80 px-3 text-xs font-black text-rose-600 shadow-xs transition hover:bg-rose-100 hover:text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-300"
-            title="Emergency SOS & 112 Dispatch"
+            title={t.emergency.callBtn}
           >
             <PhoneCall className="h-3.5 w-3.5 animate-pulse text-rose-500" />
             <span className="hidden sm:inline">SOS 112</span>
           </button>
+
+          <div className="relative">
+            <Button
+              variant="secondary"
+              className="relative h-10 w-10 px-0 rounded-2xl"
+              aria-label={t.notifications.title}
+              title={t.notifications.title}
+              onClick={() => setAlertsOpen((open) => !open)}
+            >
+              <Bell className="h-4 w-4" />
+              {alertCount > 0 ? (
+                <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-black text-white">
+                  {alertCount}
+                </span>
+              ) : null}
+            </Button>
+
+            {alertsOpen ? (
+              <div className="absolute right-0 z-30 mt-2 w-80 rounded-2xl border border-lavender-200 bg-white p-3 shadow-glow dark:border-white/10 dark:bg-[#181326]">
+                <div className="flex items-center justify-between px-1 pb-2">
+                  <p className="text-xs font-black text-ink dark:text-white">{t.notifications.title}</p>
+                  <button
+                    type="button"
+                    className="text-[11px] font-bold text-muted hover:text-primary"
+                    onClick={() => setAlertsOpen(false)}
+                  >
+                    {t.ui.close}
+                  </button>
+                </div>
+                {alerts === null ? (
+                  <p className="px-1 py-3 text-xs text-muted">...</p>
+                ) : alerts.length === 0 ? (
+                  <p className="px-1 py-3 text-xs leading-5 text-muted dark:text-white/60">{t.notifications.empty}</p>
+                ) : (
+                  <ul className="max-h-72 space-y-2 overflow-y-auto">
+                    {alerts.slice(0, 15).map((alert) => (
+                      <li key={alert.id} className="rounded-xl border border-lavender-100 bg-lavender-50/60 p-2.5 dark:border-white/10 dark:bg-white/5">
+                        <p className="text-[11px] leading-4 text-ink dark:text-white">{alert.message}</p>
+                        <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-muted">
+                          {alert.sent_status} · {alert.sent_at ? new Date(alert.sent_at).toLocaleString() : "queued"}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            ) : null}
+          </div>
 
           <LanguageSelector />
 

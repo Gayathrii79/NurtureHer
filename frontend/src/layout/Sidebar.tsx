@@ -31,7 +31,7 @@ export function Sidebar({ open, onToggle, onClose }: { open: boolean; onToggle: 
         type="button"
         onClick={onToggle}
         className="fixed left-4 top-4 z-50 flex h-11 w-11 items-center justify-center rounded-2xl bg-white/90 shadow-card backdrop-blur-xl transition hover:-translate-y-0.5 lg:hidden"
-        aria-label="Open navigation"
+        aria-label={t.ui.openNavigation}
       >
         <Menu className="h-5 w-5 text-primary" />
       </button>
@@ -55,7 +55,7 @@ export function Sidebar({ open, onToggle, onClose }: { open: boolean; onToggle: 
             type="button"
             onClick={onClose}
             className="rounded-xl p-2 text-muted transition hover:bg-lavender-50 hover:text-primary lg:hidden"
-            aria-label="Close navigation"
+            aria-label={t.ui.closeNavigation}
           >
             <X className="h-5 w-5" />
           </button>
@@ -67,11 +67,11 @@ export function Sidebar({ open, onToggle, onClose }: { open: boolean; onToggle: 
             <div className="flex items-center gap-2">
               {getRoleIcon()}
               <span className="text-xs font-black capitalize text-ink dark:text-white">
-                {user?.role?.replace("_", " ") || "Mother"} Portal
+                {user?.role === "doctor" ? t.ui.doctorRole : user?.role === "asha_worker" ? t.ui.ashaRole : user?.role === "caregiver" ? t.ui.caregiverRole : user?.role === "admin" ? t.ui.adminRole : t.ui.motherPortal}
               </span>
             </div>
             <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-primary dark:bg-primary/20">
-              Active
+              {t.ui.active}
             </span>
           </div>
           <p className="mt-1 text-[11px] leading-4 text-muted dark:text-white/55">
@@ -118,7 +118,7 @@ export function Sidebar({ open, onToggle, onClose }: { open: boolean; onToggle: 
       </aside>
       {open ? (
         <button
-          aria-label="Close navigation"
+          aria-label={t.ui.closeNavigation}
           className="fixed inset-0 z-30 bg-ink/20 backdrop-blur-sm lg:hidden"
           onClick={onToggle}
         />

@@ -1,7 +1,12 @@
-import { ReactNode } from "react";
+import { ReactNode, useEffect } from "react";
 import { motion } from "framer-motion";
+import { useLanguage } from "@/context/useLanguage";
 
 export function Page({ title, subtitle, children }: { title: string; subtitle?: string; children: ReactNode }) {
+  const { t } = useLanguage();
+  useEffect(() => {
+    document.title = `${title} | ${t.common.appName}`;
+  }, [title, t.common.appName]);
   return (
     <motion.section
       initial={{ opacity: 0, y: 14 }}

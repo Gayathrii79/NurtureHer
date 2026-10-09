@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone
-from typing import Any
 from uuid import UUID, uuid4
+
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.redis import redis_client
@@ -11,7 +12,7 @@ from app.schemas.auth import TokenPair
 
 
 class TokenService:
-    def __init__(self, db: Any) -> None:
+    def __init__(self, db: AsyncSession) -> None:
         self.db = db
         self.refresh_tokens = RefreshTokenRepository(db)
 
@@ -29,14 +30,36 @@ class TokenService:
         if not jti:
             raise ValueError("Refresh token missing id")
         user_id = await redis_client.get(self._refresh_key(jti))
-        if not user_id or user_id != payload["sub"]:
+        if user_id is not None and user_id != payload["sub"]:
+            raise ValueError("Refresh token mismatch")
+
+        # Redis is a fast cache; the refresh_tokens row is authoritative, so a
+        # missing Redis key (broker down, eviction, restart) must not hard-fail
+        # refresh - that would silently log every user out when the access token
+        # expires. Rotation is still single-use: the row is marked revoked below
+        # and the Redis key deleted, so replaying a used token is rejected.
+        token_record = await self._get_by_jti(jti)
+        if token_record is not None and str(token_record.user_id) != payload["sub"]:
+            raise ValueError("Refresh token mismatch")
+        now = datetime.now(timezone.utc)
+        db_valid = False
+        if token_record is not None:
+            expires_at = token_record.expires_at
+            if expires_at is not None and expires_at.tzinfo is None:
+                # SQLite returns naive UTC timestamps; Postgres returns aware ones.
+                expires_at = expires_at.replace(tzinfo=timezone.utc)
+            if token_record.revoked_at is not None or (
+                expires_at is not None and expires_at <= now
+            ):
+                raise ValueError("Refresh token has expired or was already used")
+            token_record.revoked_at = now
+            await self.db.flush()
+            db_valid = True
+        if not db_valid and user_id is None:
+            # Neither store knows this token: reject (expired, used, or forged).
             raise ValueError("Refresh token has expired or was already used")
         await redis_client.delete(self._refresh_key(jti))
-        token_record = await self._get_by_jti(jti)
-        if token_record:
-            token_record.revoked_at = datetime.now(timezone.utc)
-            await self.db.flush()
-        return user_id, payload
+        return payload["sub"], payload
 
     async def revoke_refresh_token(self, refresh_token: str) -> None:
         payload = decode_token(refresh_token, "refresh")

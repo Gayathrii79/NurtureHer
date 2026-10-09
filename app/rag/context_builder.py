@@ -1,6 +1,7 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
-from typing import Any
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.pcos import PCOSPrediction
 from app.models.ppd import PPDAssessment
@@ -8,50 +9,33 @@ from app.models.user import MotherProfile, User
 from app.models.wellness import Cycle, Mood, Symptom
 from app.rag.prompt_templates import LANGUAGE_NAMES
 from app.rag.retriever import HealthKnowledgeRetriever
-from app.repositories.health import PCOSRepository, PPDRepository
-from app.repositories.mother_profiles import MotherProfileRepository
-from app.repositories.wellness import CycleRepository, MoodRepository, SymptomRepository
 
 
 class HealthContextBuilder:
-    def __init__(self, db: Any = None) -> None:
+    def __init__(self, db: AsyncSession | None = None) -> None:
         self.db = db
-        self.retriever = HealthKnowledgeRetriever(top_k=4)
+        self.retriever = HealthKnowledgeRetriever()
 
-    async def build(self, user: User, message: str, language: str) -> tuple[str, str, list[dict[str, Any]]]:
-        documents = self.retriever.retrieve(message)
-        retrieved_context = self._format_retrieved_context(documents)
+    async def build(self, user: User, message: str, language: str) -> tuple[str, str]:
+        retrieved_context = self._format_retrieved_context(message)
         user_context = await self._build_user_context(user, language)
-        sources = [
-            {
-                "id": item.document.metadata.get("id"),
-                "category": item.document.metadata.get("category"),
-                "title": item.document.metadata.get("title"),
-                "source": item.document.metadata.get("source", "Clinical Practice Standard"),
-                "score": round(item.score, 3),
-                "excerpt": item.document.page_content[:180] + "...",
-            }
-            for item in documents
-        ]
-        return retrieved_context, user_context, sources
+        return retrieved_context, user_context
 
-    def _format_retrieved_context(self, documents) -> str:
+    def _format_retrieved_context(self, message: str) -> str:
+        documents = self.retriever.retrieve(message)
         return "\n".join(
-            f"- [{item.document.metadata.get('category', 'CLINICAL').upper()}] "
-            f"**{item.document.metadata.get('title', 'Clinical Guidance')}** "
-            f"(Source: {item.document.metadata.get('source', 'Clinical Standard')}):\n  {item.document.page_content}"
-            for item in documents
+            f"- [{item.document.metadata.get('category')}] {item.document.page_content}" for item in documents
         )
 
     async def _build_user_context(self, user: User, language: str) -> str:
         lines = [
-            f"Patient Name: {user.name}",
-            f"Preferred Language: {LANGUAGE_NAMES.get(language, language)}",
+            f"Name: {user.name}",
+            f"Preferred language: {LANGUAGE_NAMES.get(language, language)}",
         ]
         if self.db is None:
             return "\n".join(lines)
 
-        profile = await MotherProfileRepository(self.db).get_by_user_id(user.id)
+        profile = await self.db.scalar(select(MotherProfile).where(MotherProfile.user_id == user.id))
         if profile:
             lines.extend(
                 [
@@ -62,14 +46,14 @@ class HealthContextBuilder:
                 ]
             )
 
-        latest_mood = await MoodRepository(self.db).latest_for_user(user.id)
-        latest_symptoms = await SymptomRepository(self.db).latest_for_user(user.id)
-        latest_cycle = await CycleRepository(self.db).latest_for_user(user.id)
-        latest_pcos = await PCOSRepository(self.db).latest_for_user(user.id)
-        latest_ppd = await PPDRepository(self.db).latest_for_user(user.id)
+        latest_mood = await self.db.scalar(select(Mood).where(Mood.user_id == user.id).order_by(Mood.created_at.desc()).limit(1))
+        latest_symptoms = await self.db.scalar(select(Symptom).where(Symptom.user_id == user.id).order_by(Symptom.created_at.desc()).limit(1))
+        latest_cycle = await self.db.scalar(select(Cycle).where(Cycle.user_id == user.id).order_by(Cycle.created_at.desc()).limit(1))
+        latest_pcos = await self.db.scalar(select(PCOSPrediction).where(PCOSPrediction.user_id == user.id).order_by(PCOSPrediction.created_at.desc()).limit(1))
+        latest_ppd = await self.db.scalar(select(PPDAssessment).where(PPDAssessment.user_id == user.id).order_by(PPDAssessment.created_at.desc()).limit(1))
 
         if latest_mood:
-            lines.append(f"Latest logged mood: {latest_mood.mood.value if hasattr(latest_mood.mood, 'value') else latest_mood.mood}")
+            lines.append(f"Latest mood: {latest_mood.mood.value}")
         if latest_symptoms:
             active_symptoms = [
                 name
@@ -82,14 +66,11 @@ class HealthContextBuilder:
                 }.items()
                 if active
             ]
-            lines.append(f"Active symptoms: {', '.join(active_symptoms) if active_symptoms else 'none reported'}")
+            lines.append(f"Latest symptoms: {', '.join(active_symptoms) if active_symptoms else 'none reported'}")
         if latest_cycle:
-            pred_date = latest_cycle.next_period_prediction.isoformat() if hasattr(latest_cycle.next_period_prediction, "isoformat") else str(latest_cycle.next_period_prediction)
-            lines.append(f"Next cycle estimate: {pred_date}")
+            lines.append(f"Next cycle estimate: {latest_cycle.next_period_prediction.isoformat()}")
         if latest_pcos:
-            risk_val = latest_pcos.risk_level.value if hasattr(latest_pcos.risk_level, "value") else str(latest_pcos.risk_level)
-            lines.append(f"Latest PCOS risk: {risk_val} ({latest_pcos.probability:.0%})")
+            lines.append(f"Latest PCOS risk: {latest_pcos.risk_level.value} ({latest_pcos.probability:.0%})")
         if latest_ppd:
-            ppd_risk = latest_ppd.risk_level.value if hasattr(latest_ppd.risk_level, "value") else str(latest_ppd.risk_level)
-            lines.append(f"Latest PPD risk: {ppd_risk}, EPDS score {latest_ppd.epds_score}")
+            lines.append(f"Latest PPD risk: {latest_ppd.risk_level.value}, EPDS score {latest_ppd.epds_score}")
         return "\n".join(lines)

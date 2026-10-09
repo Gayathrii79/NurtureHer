@@ -1,54 +1,40 @@
-﻿from __future__ import annotations
-
 import uuid
-from typing import Any
+from datetime import datetime
+from typing import TYPE_CHECKING
 
-from app.models.base import BaseDocument, parse_uuid
+from sqlalchemy import DateTime, ForeignKey, String, Text, func
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.core.database import Base
 
-class DoctorPatient(BaseDocument):
-    collection_name = "doctor_patients"
-
-    def __init__(self, **kwargs: Any) -> None:
-        self.doctor_id: uuid.UUID = parse_uuid(kwargs.pop("doctor_id", None)) or uuid.uuid4()
-        self.patient_id: uuid.UUID = parse_uuid(kwargs.pop("patient_id", None)) or uuid.uuid4()
-        self.status: str = kwargs.pop("status", "active")
-        super().__init__(**kwargs)
-
-    @classmethod
-    def from_mongo(cls, doc: dict[str, Any] | None) -> DoctorPatient | None:
-        if not doc:
-            return None
-        doc_copy = dict(doc)
-        if "_id" in doc_copy:
-            doc_copy["id"] = parse_uuid(doc_copy.pop("_id"))
-        if "doctor_id" in doc_copy:
-            doc_copy["doctor_id"] = parse_uuid(doc_copy["doctor_id"])
-        if "patient_id" in doc_copy:
-            doc_copy["patient_id"] = parse_uuid(doc_copy["patient_id"])
-        return cls(**doc_copy)
+if TYPE_CHECKING:
+    from app.models.user import User
 
 
-class DoctorNote(BaseDocument):
-    collection_name = "doctor_notes"
+class DoctorPatient(Base):
+    __tablename__ = "doctor_patients"
 
-    def __init__(self, **kwargs: Any) -> None:
-        self.doctor_id: uuid.UUID = parse_uuid(kwargs.pop("doctor_id", None)) or uuid.uuid4()
-        self.patient_id: uuid.UUID = parse_uuid(kwargs.pop("patient_id", None)) or uuid.uuid4()
-        self.clinical_observations: str = kwargs.pop("clinical_observations", "")
-        self.follow_up_recommendation: str | None = kwargs.pop("follow_up_recommendation", None)
-        self.prescribed_advice: str | None = kwargs.pop("prescribed_advice", None)
-        super().__init__(**kwargs)
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    doctor_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    patient_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    status: Mapped[str] = mapped_column(String(32), default="active")  # active, completed, referred
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
-    @classmethod
-    def from_mongo(cls, doc: dict[str, Any] | None) -> DoctorNote | None:
-        if not doc:
-            return None
-        doc_copy = dict(doc)
-        if "_id" in doc_copy:
-            doc_copy["id"] = parse_uuid(doc_copy.pop("_id"))
-        if "doctor_id" in doc_copy:
-            doc_copy["doctor_id"] = parse_uuid(doc_copy["doctor_id"])
-        if "patient_id" in doc_copy:
-            doc_copy["patient_id"] = parse_uuid(doc_copy["patient_id"])
-        return cls(**doc_copy)
+    doctor: Mapped["User"] = relationship(foreign_keys=[doctor_id])
+    patient: Mapped["User"] = relationship(foreign_keys=[patient_id])
+
+
+class DoctorNote(Base):
+    __tablename__ = "doctor_notes"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    doctor_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    patient_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    clinical_observations: Mapped[str] = mapped_column(Text, nullable=False)
+    follow_up_recommendation: Mapped[str | None] = mapped_column(Text, nullable=True)
+    prescribed_advice: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    doctor: Mapped["User"] = relationship(foreign_keys=[doctor_id])
+    patient: Mapped["User"] = relationship(foreign_keys=[patient_id])

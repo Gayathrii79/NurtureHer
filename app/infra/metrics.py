@@ -1,6 +1,7 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from prometheus_client import Gauge
+from sqlalchemy import text
 
 from app.core.database import AsyncSessionLocal
 from app.core.redis import redis_client
@@ -13,7 +14,7 @@ REDIS_CONNECTED_CLIENTS = Gauge("nurtureher_redis_connected_clients", "Connected
 async def collect_infrastructure_metrics() -> None:
     try:
         async with AsyncSessionLocal() as db:
-            await db.command("ping")
+            await db.execute(text("SELECT 1"))
             DB_UP.set(1)
     except Exception:
         DB_UP.set(0)

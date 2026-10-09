@@ -27,6 +27,8 @@ class PCOSPredictionRead(ORMModel):
     probability: float
     recommendations: str
     created_at: datetime
+    # Engine that produced this response: random_forest_pickle | random_forest_json | rule_fallback.
+    model_source: str | None = None
 
 
 class PPDAssessmentRequest(BaseModel):
@@ -49,7 +51,10 @@ class PPDAssessmentRead(ORMModel):
     id: UUID
     epds_score: int
     sentiment: str
+    sentiment_score: float
+    combined_risk_score: float
     risk_level: RiskLevel
+    recommendations: str | None
     created_at: datetime
 
 
@@ -118,6 +123,11 @@ class HighRiskCaseRead(ORMModel):
     assigned_worker_id: UUID | None
     status: str
     created_at: datetime
+    # Mother context exposed to the ASHA/ANM triage queue (never to the mother herself).
+    mother_name: str | None = None
+    mother_phone: str | None = None
+    district: str | None = None
+    village: str | None = None
 
 
 class HighRiskCaseUpdate(BaseModel):

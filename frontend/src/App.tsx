@@ -1,8 +1,9 @@
 import { AnimatePresence } from "framer-motion";
-import { lazy, Suspense } from "react";
+import { lazy, ReactNode, Suspense } from "react";
 import { Route, Routes, useLocation, Navigate } from "react-router-dom";
 import { LoadingSkeleton } from "@/components/common/States";
 import { useAuth } from "@/context/useAuth";
+import { UserRole } from "@/lib/api";
 import { AuthPage } from "@/pages/AuthPages";
 import { AppShell } from "@/layout/AppShell";
 
@@ -14,6 +15,8 @@ const NutritionPage = lazy(() => import("@/pages/NutritionPage").then((m) => ({ 
 const CareCircleQR = lazy(() => import("@/pages/CareCircleQR").then((m) => ({ default: m.CareCircleQRPage })));
 const DoctorVisitAssistant = lazy(() => import("@/pages/DoctorVisitAssistant").then((m) => ({ default: m.DoctorVisitAssistant })));
 const CaregiverPage = lazy(() => import("@/pages/CaregiverPage").then((m) => ({ default: m.CaregiverPage })));
+const HerReachPage = lazy(() => import("@/pages/HerReachPage").then((m) => ({ default: m.HerReachPage })));
+const VerifyAccessPage = lazy(() => import("@/pages/CareCircleQR").then((m) => ({ default: m.VerifyAccessPage })));
 
 const Coach = lazy(() => import("@/pages/Coach").then((m) => ({ default: m.Coach })));
 const PCOSPage = lazy(() => import("@/pages/ClinicalPages").then((m) => ({ default: m.PCOSPage })));
@@ -28,6 +31,13 @@ const ProfilePage = lazy(() => import("@/pages/SupportPages").then((m) => ({ def
 const SettingsPage = lazy(() => import("@/pages/SupportPages").then((m) => ({ default: m.SettingsPage })));
 const LogoutPage = lazy(() => import("@/pages/SupportPages").then((m) => ({ default: m.LogoutPage })));
 const NotFoundPage = lazy(() => import("@/pages/SupportPages").then((m) => ({ default: m.NotFoundPage })));
+
+/** Client-side role gate. The API enforces the same rules server-side. */
+function RoleRoute({ roles, children }: { roles: UserRole[]; children: ReactNode }) {
+  const { user } = useAuth();
+  if (!user || !roles.includes(user.role)) return <Navigate to="/" replace />;
+  return <>{children}</>;
+}
 
 export default function App() {
   const location = useLocation();
@@ -54,9 +64,30 @@ export default function App() {
             <Route path="/" element={getHomeElement()} />
 
             {/* Role Dedicated Portals */}
-            <Route path="/doctor" element={<DoctorDashboard />} />
-            <Route path="/admin" element={<AdminDashboard />} />
-            <Route path="/asha" element={<ASHAPage />} />
+            <Route
+              path="/doctor"
+              element={
+                <RoleRoute roles={["doctor", "admin"]}>
+                  <DoctorDashboard />
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="/admin"
+              element={
+                <RoleRoute roles={["admin"]}>
+                  <AdminDashboard />
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="/asha"
+              element={
+                <RoleRoute roles={["asha_worker", "admin"]}>
+                  <ASHAPage />
+                </RoleRoute>
+              }
+            />
 
             {/* Core Health & Care Tools */}
             <Route path="/dashboard" element={<Dashboard />} />
@@ -71,8 +102,10 @@ export default function App() {
             <Route path="/doctor-visit" element={<DoctorVisitAssistant />} />
             <Route path="/carecircle" element={<CareCircleQR />} />
             <Route path="/caregiver" element={<CaregiverPage />} />
+            <Route path="/herreach" element={<HerReachPage />} />
             <Route path="/emergency" element={<EmergencyPage />} />
             <Route path="/reports" element={<ReportsZone />} />
+            <Route path="/verify-access" element={<VerifyAccessPage />} />
 
             {/* Account & Settings */}
             <Route path="/profile" element={<ProfilePage />} />

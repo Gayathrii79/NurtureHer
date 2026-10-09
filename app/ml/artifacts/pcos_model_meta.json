@@ -1,0 +1,36 @@
+{
+  "trained_at": "2026-10-06T16:49:51.529954+00:00",
+  "dataset": "data/pcos/pcos_data_without_infertility.csv",
+  "dataset_format": "kaggle",
+  "samples": 541,
+  "positive_samples": 177,
+  "sklearn_version": "1.5.2",
+  "n_estimators": 200,
+  "feature_names": [
+    "age",
+    "bmi",
+    "cycle_irregularity",
+    "hair_growth",
+    "skin_darkening",
+    "weight_gain",
+    "follicle_count"
+  ],
+  "feature_importances": {
+    "age": 0.1031,
+    "bmi": 0.1236,
+    "cycle_irregularity": 0.0639,
+    "hair_growth": 0.0898,
+    "skin_darkening": 0.0971,
+    "weight_gain": 0.0937,
+    "follicle_count": 0.4289
+  },
+  "metrics": {
+    "accuracy": 0.9083,
+    "precision": 0.9062,
+    "recall": 0.8056,
+    "f1": 0.8529,
+    "roc_auc": 0.9346,
+    "cv_accuracy_mean": 0.8724
+  },
+  "citation": "Kottarathil, P. (2020). Polycystic ovary syndrome (PCOS) [Kaggle dataset]."
+}

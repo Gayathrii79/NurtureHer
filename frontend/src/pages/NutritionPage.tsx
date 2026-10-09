@@ -1,9 +1,7 @@
-import { Check, Droplets, Heart, Info, Plus, ShieldCheck, Sparkles, Utensils } from "lucide-react";
+import { Droplets, Plus, Sparkles, Utensils } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api, HealthMythItem, NutritionPlanItem } from "@/lib/api";
-import { useLanguage } from "@/context/useLanguage";
 import { Page } from "@/components/common/Page";
-import { SectionHeader } from "@/components/common/Premium";
 import { LoadingSkeleton } from "@/components/common/States";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,7 +9,6 @@ import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 
 export function NutritionPage() {
-  const { t } = useLanguage();
   const [plans, setPlans] = useState<NutritionPlanItem[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [hydrationCups, setHydrationCups] = useState<number>(0);

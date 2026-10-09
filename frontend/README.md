@@ -23,6 +23,8 @@ npm install
 npm run dev
 ```
 
+During development, Vite proxies `/api` requests to the FastAPI server at `http://127.0.0.1:8000`, so the browser uses a same-origin API URL. Set `VITE_API_BASE_URL` when the frontend is deployed behind a different API route.
+
 ## Build
 
 ```bash

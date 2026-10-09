@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import PaginationParams, get_current_user, pagination_params, require_roles
@@ -326,5 +326,62 @@ async def list_reports(
         "count": len(reports),
         "reports": reports,
         "disclaimer": "These records reflect initial AI/clinical screening risk indications and do not constitute formal diagnostic confirmation.",
+    }
+
+
+@router.get("/report/pdf")
+async def download_health_report(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """Generate a real PDF health report containing only the caller's own records."""
+    from app.services.pdf_report import build_health_report_pdf
+
+    pdf_bytes = await build_health_report_pdf(db, user)
+    safe_name = "".join(ch for ch in user.email.split("@")[0] if ch.isalnum() or ch in "-_") or "report"
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="nurtureher-health-report-{safe_name}.pdf"'},
+    )
+
+
+@router.post("/emergency-sos")
+async def emergency_sos(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """Record a real emergency alert for the caller and the assigned ASHA worker.
+
+    Returns the actual dispatch state of every alert (queued / skipped_no_phone /
+    queued_no_worker) - it never claims an SMS was delivered when it was not.
+    """
+    from app.repositories.users import UserRepository
+    from app.services.notification import NotificationService
+
+    contact = user.phone or "no phone on file"
+    message = (
+        f"EMERGENCY SOS from {user.name} ({contact}). Immediate assistance requested via NurtureHer. "
+        "Please call the user right away and dispatch support."
+    )
+    notifications = NotificationService(db)
+    results = [{"recipient": "self", "alerted": True, "sent_status": (await notifications.queue_sms_alert(user, message)).sent_status}]
+
+    asha_workers = await UserRepository(db).asha_workers(limit=1)
+    if asha_workers:
+        worker = asha_workers[0]
+        worker_alert = await notifications.queue_sms_alert(worker, message)
+        results.append({"recipient": "asha_worker", "alerted": True, "sent_status": worker_alert.sent_status})
+    else:
+        results.append({"recipient": "asha_worker", "alerted": False, "sent_status": "no_asha_worker_assigned"})
+
+    await db.commit()
+
+    statuses = {item["sent_status"] for item in results}
+    if statuses == {"skipped_no_phone"} or "skipped_no_phone" in statuses:
+        note = "Alerts recorded, but no SMS could be queued because no phone number is on file. Add a phone number in your profile."
+    elif "queued_no_worker" in statuses:
+        note = "Alerts recorded. SMS dispatch is pending: the background worker (Redis/Celery) is not running, so no SMS has been sent yet."
+    else:
+        note = "Alerts recorded and handed to the SMS worker for delivery."
+
+    return {
+        "alerts": results,
+        "emergency_numbers": ["112", "108", "104"],
+        "message": note,
     }
 

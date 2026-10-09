@@ -75,3 +75,7 @@ restore:
 
 clean:
 	$(PYTHON) -c "import pathlib, shutil; [shutil.rmtree(p, ignore_errors=True) for p in pathlib.Path('.').rglob('__pycache__')]"
+
+
+demo:
+	$(PYTHON) scripts/start_demo.py

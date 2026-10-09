@@ -15,8 +15,24 @@ export default tseslint.config(
     },
     rules: {
       ...reactHooks.configs.recommended.rules,
-      "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
+      "react-refresh/only-export-components": [
+        "warn",
+        { allowConstantExport: true, allowExportNames: ["useLanguage", "useTheme"] },
+      ],
       "@typescript-eslint/no-explicit-any": "off",
+    },
+  },
+  {
+    // Service worker runs in a worker scope, not the browser page scope.
+    files: ["public/sw.js"],
+    languageOptions: {
+      globals: {
+        caches: "readonly",
+        console: "readonly",
+        fetch: "readonly",
+        self: "readonly",
+        URL: "readonly",
+      },
     },
   },
 );

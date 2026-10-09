@@ -10,10 +10,8 @@ class Settings(BaseSettings):
     project_name: str = "NurtureHer"
     environment: str = "development"
     api_v1_prefix: str = "/api/v1"
-    mongodb_url: str = "mongodb://localhost:27017"
-    mongodb_db_name: str = "nurtureher"
-    database_url: str = "postgresql+asyncpg://nurtureher:nurtureher@localhost:5432/nurtureher"
-    sync_database_url: str = "postgresql://nurtureher:nurtureher@localhost:5432/nurtureher"
+    database_url: str = "sqlite+aiosqlite:///./nurtureher.db"
+    sync_database_url: str = "sqlite:///./nurtureher.db"
     redis_url: str = "redis://localhost:6379/0"
     celery_broker_url: str = "redis://localhost:6379/1"
     celery_result_backend: str = "redis://localhost:6379/2"
@@ -22,9 +20,13 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 7
     encryption_key: str = Field(default="change-me-32-byte-key-for-prod!!", min_length=16)
-    backend_cors_origins: str = "http://localhost:3000,http://localhost:5173"
+    backend_cors_origins: str = "http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:5173"
     pcos_model_path: str = "app/ml/artifacts/pcos_random_forest.pkl"
+    pcos_model_json_path: str = "app/ml/artifacts/pcos_random_forest.json"
+    sentiment_model: str = "distilbert-base-uncased-finetuned-sst-2-english"
+    sentiment_use_transformer: bool = True
     gemini_api_key: str | None = None
+    gemini_model: str = "gemini-1.5-flash"
     gemini_model: str = "gemini-1.5-flash"
     sms_provider: str = "twilio"
     twilio_account_sid: str | None = None

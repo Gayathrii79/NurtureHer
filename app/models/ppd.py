@@ -1,35 +1,29 @@
-﻿from __future__ import annotations
-
 import uuid
-from typing import Any
+from datetime import datetime
+from typing import TYPE_CHECKING
 
-from app.models.base import BaseDocument, parse_uuid
+from sqlalchemy import DateTime, Enum, Float, ForeignKey, Integer, String, Text, func
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.core.database import Base
 from app.models.enums import RiskLevel
 
+if TYPE_CHECKING:
+    from app.models.user import User
 
-class PPDAssessment(BaseDocument):
-    collection_name = "ppd_assessments"
 
-    def __init__(self, **kwargs: Any) -> None:
-        self.user_id: uuid.UUID = parse_uuid(kwargs.pop("user_id", None)) or uuid.uuid4()
-        self.epds_score: int = int(kwargs.pop("epds_score", 0))
-        self.sentiment: str = kwargs.pop("sentiment", "")
-        risk_val = kwargs.pop("risk_level", RiskLevel.LOW)
-        self.risk_level: RiskLevel = risk_val if isinstance(risk_val, RiskLevel) else RiskLevel(risk_val)
-        super().__init__(**kwargs)
+class PPDAssessment(Base):
+    __tablename__ = "ppd_assessments"
 
-    @classmethod
-    def from_mongo(cls, doc: dict[str, Any] | None) -> PPDAssessment | None:
-        if not doc:
-            return None
-        doc_copy = dict(doc)
-        if "_id" in doc_copy:
-            doc_copy["id"] = parse_uuid(doc_copy.pop("_id"))
-        if "user_id" in doc_copy:
-            doc_copy["user_id"] = parse_uuid(doc_copy["user_id"])
-        if "risk_level" in doc_copy and not isinstance(doc_copy["risk_level"], RiskLevel):
-            try:
-                doc_copy["risk_level"] = RiskLevel(doc_copy["risk_level"])
-            except Exception:
-                doc_copy["risk_level"] = RiskLevel.LOW
-        return cls(**doc_copy)
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False)
+    epds_score: Mapped[int] = mapped_column(Integer, nullable=False)
+    sentiment: Mapped[str] = mapped_column(String(40), nullable=False)
+    sentiment_score: Mapped[float] = mapped_column(Float, nullable=False, server_default="0.5")
+    combined_risk_score: Mapped[float] = mapped_column(Float, nullable=False, server_default="0.0")
+    risk_level: Mapped[RiskLevel] = mapped_column(Enum(RiskLevel, name="ppd_risk_level"), nullable=False)
+    recommendations: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    user: Mapped["User"] = relationship(back_populates="ppd_assessments")

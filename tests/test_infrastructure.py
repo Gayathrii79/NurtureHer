@@ -1,8 +1,10 @@
 import pytest
 from fastapi import Response
 from starlette.requests import Request
+from sqlalchemy import create_engine, inspect
 
 from app.core.config import Settings
+from app.core.database import ensure_sqlite_schema_compatibility
 from app.infra.config_audit import audit_production_config
 from app.infra.health import readiness
 from app.infra.metrics import DB_UP, REDIS_CONNECTED_CLIENTS, REDIS_UP, collect_infrastructure_metrics
@@ -128,6 +130,21 @@ def test_config_audit_rejects_production_placeholders_and_wildcard_cors():
     assert any("JWT_SECRET_KEY" in error for error in result.errors)
     assert any("ENCRYPTION_KEY" in error for error in result.errors)
     assert any("must not use '*'" in error for error in result.errors)
+
+
+def test_legacy_sqlite_schema_adds_missing_ppd_fields():
+    engine = create_engine("sqlite://")
+    with engine.begin() as connection:
+        connection.exec_driver_sql("CREATE TABLE ppd_assessments (id TEXT PRIMARY KEY)")
+
+        ensure_sqlite_schema_compatibility(connection)
+        ensure_sqlite_schema_compatibility(connection)
+
+        columns = {column["name"]: column for column in inspect(connection).get_columns("ppd_assessments")}
+        assert {"sentiment_score", "combined_risk_score", "recommendations"} <= columns.keys()
+        assert columns["sentiment_score"]["default"] == "0.5"
+        assert columns["combined_risk_score"]["default"] == "0.0"
+    engine.dispose()
 
 
 @pytest.mark.asyncio

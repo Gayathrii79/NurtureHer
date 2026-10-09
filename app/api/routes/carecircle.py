@@ -16,6 +16,20 @@ from app.models.wellness import Mood, Symptom
 router = APIRouter(prefix="/carecircle", tags=["CareCircle QR TrustVault"])
 
 
+def _as_aware_utc(value: datetime | None) -> datetime | None:
+    """SQLite returns naive datetimes; normalize before comparing with ``now(utc)``."""
+    if value is None:
+        return None
+    return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value
+
+
+def _qr_is_expired(qr: CareCircleQR | None) -> bool:
+    if qr is None:
+        return True
+    expires_at = _as_aware_utc(qr.expires_at)
+    return expires_at is None or expires_at < datetime.now(timezone.utc)
+
+
 class AccessRequestPayload(BaseModel):
     token: str
     relationship_label: str = "Caregiver"
@@ -54,12 +68,12 @@ async def get_active_qr(
 ):
     stmt = (
         select(CareCircleQR)
-        .where(CareCircleQR.user_id == user.id, CareCircleQR.expires_at > datetime.now(timezone.utc))
+        .where(CareCircleQR.user_id == user.id)
         .order_by(desc(CareCircleQR.created_at))
         .limit(1)
     )
     qr = await db.scalar(stmt)
-    if not qr:
+    if _qr_is_expired(qr):
         # Automatically generate one
         qr = CareCircleQR.create_token(user_id=user.id, valid_days=30)
         db.add(qr)
@@ -81,7 +95,7 @@ async def request_access(
 ):
     """Scanned user or caregiver requests access using the token."""
     qr = await db.scalar(select(CareCircleQR).where(CareCircleQR.token == payload.token))
-    if not qr or qr.expires_at < datetime.now(timezone.utc):
+    if _qr_is_expired(qr):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invalid or expired QR token")
 
     if qr.user_id == requester.id:

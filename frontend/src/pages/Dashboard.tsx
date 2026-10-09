@@ -1,12 +1,10 @@
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import {
   Activity,
-  Baby,
   BarChart3,
   CalendarHeart,
   Check,
   ChevronRight,
-  Download,
   HeartPulse,
   LifeBuoy,
   Plus,
@@ -29,16 +27,19 @@ import { Card } from "@/components/ui/card";
 import { useLanguage } from "@/context/useLanguage";
 
 const SYMPTOM_OPTIONS = [
-  { key: "fatigue", label: "Fatigue", emoji: "😴", description: "Feeling unusually tired or low on energy" },
-  { key: "headache", label: "Headache", emoji: "🤕", description: "Pain or pressure in head or temples" },
-  { key: "sleep_issue", label: "Sleep Issues", emoji: "🌙", description: "Difficulty falling asleep or staying asleep" },
-  { key: "anxiety", label: "Anxiety", emoji: "😰", description: "Feeling nervous, restless, or on edge" },
-  { key: "cramps", label: "Cramps", emoji: "⚡", description: "Abdominal or pelvic muscle cramping" },
+  { key: "fatigue", emoji: "😴" },
+  { key: "headache", emoji: "🤕" },
+  { key: "sleep_issue", emoji: "🌙" },
+  { key: "anxiety", emoji: "😰" },
+  { key: "cramps", emoji: "⚡" },
 ] as const;
 
 export function Dashboard() {
   const { t } = useLanguage();
   const navigate = useNavigate();
+  useEffect(() => {
+    document.title = `${t.nav.dashboard} | ${t.common.appName}`;
+  }, [t.nav.dashboard, t.common.appName]);
   const [data, setData] = useState<DashboardStats | null>(null);
   const [error, setError] = useState(false);
   const [showSymptomModal, setShowSymptomModal] = useState(false);
@@ -95,7 +96,7 @@ export function Dashboard() {
       }, 900);
     } catch (reason) {
       setSymptomStatus("error");
-      setSymptomError(reason instanceof Error ? reason.message : "Failed to save symptoms");
+      setSymptomError(reason instanceof Error ? reason.message : t.dashboard.symptomSaveFailed);
     } finally {
       setSavingSymptoms(false);
     }
@@ -126,8 +127,8 @@ export function Dashboard() {
       {/* Medical Non-diagnostic Disclaimer */}
       <div className="flex items-center gap-2 rounded-2xl border border-lavender-200 bg-lavender-50/70 px-4 py-2.5 text-xs text-lavender-900 dark:border-lavender-800/40 dark:bg-lavender-950/40 dark:text-lavender-200">
         <Sparkles className="h-3.5 w-3.5 shrink-0 text-primary" />
-        <span className="font-semibold">Clinical Decision Support:</span>
-        <span className="truncate">NurtureHer AI provides screening insights, not medical diagnoses. Consult a licensed healthcare provider for clinical evaluation.</span>
+        <span className="font-semibold">{t.dashboard.clinicalDecisionSupport}</span>
+        <span className="truncate">{t.dashboard.clinicalDisclaimer}</span>
       </div>
 
       {/* Hero Welcome & Today's Status */}
@@ -146,7 +147,7 @@ export function Dashboard() {
               {t.dashboard.moodLabel}: <span className="capitalize text-primary">{moodDisplay}</span>
             </div>
             <div className="rounded-2xl border border-lavender-100 bg-white/90 px-4 py-2.5 text-xs font-black text-ink shadow-xs dark:border-white/10 dark:bg-white/10 dark:text-white">
-              {t.dashboard.symptomsLabel}: <span className="text-secondary">{symptomCount} active</span>
+              {t.dashboard.symptomsLabel}: <span className="text-secondary">{symptomCount} {t.dashboard.activeCount}</span>
             </div>
             <div className="rounded-2xl border border-lavender-100 bg-white/90 px-4 py-2.5 text-xs font-black text-ink shadow-xs dark:border-white/10 dark:bg-white/10 dark:text-white">
               {t.dashboard.cycleLabel}: <span className="text-primary">{stats.cycle_prediction ?? t.common.notTracked}</span>
@@ -160,7 +161,7 @@ export function Dashboard() {
                 setShowSymptomModal(true);
               }}
             >
-              <Plus className="mr-1.5 h-3.5 w-3.5" /> Log Symptoms
+              <Plus className="mr-1.5 h-3.5 w-3.5" /> {t.dashboard.logSymptoms}
             </Button>
           </div>
         </Card>
@@ -240,8 +241,8 @@ export function Dashboard() {
       <section>
         <div className="mb-4 flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-black text-ink dark:text-white">Care Suite & Tools</h2>
-            <p className="text-xs text-muted dark:text-white/60">Comprehensive AI health tools designed for antenatal, postpartum, and gynecological wellbeing.</p>
+            <h2 className="text-lg font-black text-ink dark:text-white">{t.dashboard.suiteTitle}</h2>
+            <p className="text-xs text-muted dark:text-white/60">{t.dashboard.suiteDescription}</p>
           </div>
         </div>
 
@@ -254,10 +255,10 @@ export function Dashboard() {
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-lavender-100 text-primary transition group-hover:bg-primary group-hover:text-white dark:bg-white/10">
               <HeartPulse className="h-5 w-5" />
             </div>
-            <h3 className="mt-3 text-xs font-black text-ink dark:text-white">PCOS Screening</h3>
-            <p className="mt-1 text-[11px] leading-4 text-muted dark:text-white/50">Explainable AI biomarker risk prediction.</p>
+            <h3 className="mt-3 text-xs font-black text-ink dark:text-white">{t.dashboard.quickTools[0].title}</h3>
+            <p className="mt-1 text-[11px] leading-4 text-muted dark:text-white/50">{t.dashboard.quickTools[0].description}</p>
             <span className="mt-2.5 inline-flex items-center text-[10px] font-bold text-primary group-hover:underline">
-              Screen now <ChevronRight className="ml-0.5 h-3 w-3" />
+              {t.dashboard.quickTools[0].action} <ChevronRight className="ml-0.5 h-3 w-3" />
             </span>
           </div>
 
@@ -269,10 +270,10 @@ export function Dashboard() {
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-purple-100 text-purple-700 transition group-hover:bg-purple-600 group-hover:text-white dark:bg-white/10">
               <ShieldAlert className="h-5 w-5" />
             </div>
-            <h3 className="mt-3 text-xs font-black text-ink dark:text-white">PPD Detection</h3>
-            <p className="mt-1 text-[11px] leading-4 text-muted dark:text-white/50">EPDS score and sentiment analysis.</p>
+            <h3 className="mt-3 text-xs font-black text-ink dark:text-white">{t.dashboard.quickTools[1].title}</h3>
+            <p className="mt-1 text-[11px] leading-4 text-muted dark:text-white/50">{t.dashboard.quickTools[1].description}</p>
             <span className="mt-2.5 inline-flex items-center text-[10px] font-bold text-primary group-hover:underline">
-              Take assessment <ChevronRight className="ml-0.5 h-3 w-3" />
+              {t.dashboard.quickTools[1].action} <ChevronRight className="ml-0.5 h-3 w-3" />
             </span>
           </div>
 
@@ -284,10 +285,10 @@ export function Dashboard() {
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-100 text-blue-700 transition group-hover:bg-blue-600 group-hover:text-white dark:bg-white/10">
               <Stethoscope className="h-5 w-5" />
             </div>
-            <h3 className="mt-3 text-xs font-black text-ink dark:text-white">Doctor Visit Prep</h3>
-            <p className="mt-1 text-[11px] leading-4 text-muted dark:text-white/50">7-day summary & questions to ask.</p>
+            <h3 className="mt-3 text-xs font-black text-ink dark:text-white">{t.dashboard.quickTools[2].title}</h3>
+            <p className="mt-1 text-[11px] leading-4 text-muted dark:text-white/50">{t.dashboard.quickTools[2].description}</p>
             <span className="mt-2.5 inline-flex items-center text-[10px] font-bold text-primary group-hover:underline">
-              Prepare visit <ChevronRight className="ml-0.5 h-3 w-3" />
+              {t.dashboard.quickTools[2].action} <ChevronRight className="ml-0.5 h-3 w-3" />
             </span>
           </div>
 
@@ -299,10 +300,10 @@ export function Dashboard() {
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700 transition group-hover:bg-emerald-600 group-hover:text-white dark:bg-white/10">
               <QrCode className="h-5 w-5" />
             </div>
-            <h3 className="mt-3 text-xs font-black text-ink dark:text-white">CareCircle QR</h3>
-            <p className="mt-1 text-[11px] leading-4 text-muted dark:text-white/50">Zero-data QR consent vault.</p>
+            <h3 className="mt-3 text-xs font-black text-ink dark:text-white">{t.dashboard.quickTools[3].title}</h3>
+            <p className="mt-1 text-[11px] leading-4 text-muted dark:text-white/50">{t.dashboard.quickTools[3].description}</p>
             <span className="mt-2.5 inline-flex items-center text-[10px] font-bold text-primary group-hover:underline">
-              Manage vault <ChevronRight className="ml-0.5 h-3 w-3" />
+              {t.dashboard.quickTools[3].action} <ChevronRight className="ml-0.5 h-3 w-3" />
             </span>
           </div>
 
@@ -314,10 +315,10 @@ export function Dashboard() {
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-100 text-amber-700 transition group-hover:bg-amber-600 group-hover:text-white dark:bg-white/10">
               <Utensils className="h-5 w-5" />
             </div>
-            <h3 className="mt-3 text-xs font-black text-ink dark:text-white">Nutrition & Water</h3>
-            <p className="mt-1 text-[11px] leading-4 text-muted dark:text-white/50">Cultural diets & 8-cup hydration.</p>
+            <h3 className="mt-3 text-xs font-black text-ink dark:text-white">{t.dashboard.quickTools[4].title}</h3>
+            <p className="mt-1 text-[11px] leading-4 text-muted dark:text-white/50">{t.dashboard.quickTools[4].description}</p>
             <span className="mt-2.5 inline-flex items-center text-[10px] font-bold text-primary group-hover:underline">
-              Open guide <ChevronRight className="ml-0.5 h-3 w-3" />
+              {t.dashboard.quickTools[4].action} <ChevronRight className="ml-0.5 h-3 w-3" />
             </span>
           </div>
 
@@ -329,10 +330,10 @@ export function Dashboard() {
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-lavender-100 text-primary transition group-hover:bg-primary group-hover:text-white dark:bg-white/10">
               <BarChart3 className="h-5 w-5" />
             </div>
-            <h3 className="mt-3 text-xs font-black text-ink dark:text-white">Reports Zone</h3>
-            <p className="mt-1 text-[11px] leading-4 text-muted dark:text-white/50">Printable PDF & CSV export.</p>
+            <h3 className="mt-3 text-xs font-black text-ink dark:text-white">{t.dashboard.quickTools[5].title}</h3>
+            <p className="mt-1 text-[11px] leading-4 text-muted dark:text-white/50">{t.dashboard.quickTools[5].description}</p>
             <span className="mt-2.5 inline-flex items-center text-[10px] font-bold text-primary group-hover:underline">
-              View reports <ChevronRight className="ml-0.5 h-3 w-3" />
+              {t.dashboard.quickTools[5].action} <ChevronRight className="ml-0.5 h-3 w-3" />
             </span>
           </div>
         </div>
@@ -349,14 +350,14 @@ export function Dashboard() {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <DialogPrimitive.Title className="text-lg font-black text-ink dark:text-white">
-                  Log Today's Symptoms
+                  {t.dashboard.symptomModalTitle}
                 </DialogPrimitive.Title>
                 <DialogPrimitive.Description className="mt-1 text-xs leading-5 text-muted dark:text-white/60">
-                  Select any symptoms you are experiencing today to keep your care team informed.
+                  {t.dashboard.symptomModalDescription}
                 </DialogPrimitive.Description>
               </div>
               <DialogPrimitive.Close asChild>
-                <Button variant="ghost" className="h-9 w-9 shrink-0 px-0" aria-label="Close dialog">
+                <Button variant="ghost" className="h-9 w-9 shrink-0 px-0" aria-label={t.dashboard.closeDialog}>
                   <X className="h-4 w-4" />
                 </Button>
               </DialogPrimitive.Close>
@@ -383,8 +384,8 @@ export function Dashboard() {
                     <div className="flex items-center gap-3">
                       <span className="text-xl">{opt.emoji}</span>
                       <div>
-                        <p className="text-xs font-black">{opt.label}</p>
-                        <p className="text-[11px] text-muted dark:text-white/50">{opt.description}</p>
+                        <p className="text-xs font-black">{t.dashboard.symptoms[opt.key].label}</p>
+                        <p className="text-[11px] text-muted dark:text-white/50">{t.dashboard.symptoms[opt.key].description}</p>
                       </div>
                     </div>
                     <div
@@ -402,11 +403,11 @@ export function Dashboard() {
             </div>
 
             {symptomStatus === "error" ? (
-              <p className="mt-3 text-xs font-bold text-danger">{symptomError || "Failed to save symptoms."}</p>
+              <p className="mt-3 text-xs font-bold text-danger">{symptomError || t.dashboard.symptomSaveFailed}</p>
             ) : null}
 
             {symptomStatus === "success" ? (
-              <p className="mt-3 text-xs font-bold text-emerald-700 dark:text-emerald-300">✅ Symptoms logged successfully!</p>
+              <p className="mt-3 text-xs font-bold text-emerald-700 dark:text-emerald-300">✅ {t.dashboard.symptomsSaved}</p>
             ) : null}
 
             <div className="mt-6 flex items-center gap-3">
@@ -416,13 +417,13 @@ export function Dashboard() {
                 disabled={savingSymptoms}
                 onClick={() => void handleSaveSymptoms()}
               >
-                {savingSymptoms ? t.common.saving : "Save Symptoms"}
+                {savingSymptoms ? t.common.saving : t.dashboard.logSymptoms}
               </Button>
               <Button
                 variant="secondary"
                 onClick={() => setShowSymptomModal(false)}
               >
-                Cancel
+                {t.common.cancel}
               </Button>
             </div>
           </DialogPrimitive.Content>

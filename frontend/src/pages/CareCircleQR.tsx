@@ -1,8 +1,8 @@
 import { Check, Copy, Download, KeyRound, Lock, QrCode, RefreshCw, ShieldAlert, ShieldCheck, Trash2, UserCheck, Users, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { api, CareCircleRequestItem } from "@/lib/api";
 import { useAuth } from "@/context/useAuth";
-import { useLanguage } from "@/context/useLanguage";
 import { Page } from "@/components/common/Page";
 import { SectionHeader } from "@/components/common/Premium";
 import { EmptyState, LoadingSkeleton } from "@/components/common/States";
@@ -13,7 +13,6 @@ import { Input } from "@/components/ui/input";
 
 export function CareCircleQRPage() {
   const { user } = useAuth();
-  const { t } = useLanguage();
   const [token, setToken] = useState("");
   const [qrPayload, setQrPayload] = useState("");
   const [requests, setRequests] = useState<CareCircleRequestItem[]>([]);
@@ -24,6 +23,7 @@ export function CareCircleQRPage() {
   const [requestRole, setRequestRole] = useState("Caregiver");
   const [requestStatusMsg, setRequestStatusMsg] = useState("");
   const [activeTab, setActiveTab] = useState<"my-qr" | "requests" | "simulate-scan">("my-qr");
+  const [qrError, setQrError] = useState("");
 
   // Sharing permissions config state for approving requests
   const [shareConfig, setShareConfig] = useState({
@@ -34,6 +34,7 @@ export function CareCircleQRPage() {
 
   async function loadQRAndRequests() {
     setLoading(true);
+    setQrError("");
     try {
       const [qrRes, reqRes] = await Promise.all([
         api.getCareCircleQR(),
@@ -49,9 +50,10 @@ export function CareCircleQRPage() {
         setToken(genRes.token);
         setQrPayload(window.location.origin + genRes.qr_payload);
       } catch {
-        // Fallback
-        setToken("demo-token-nurtureher-carecircle-secure");
-        setQrPayload(window.location.origin + "/verify-access?token=demo-token-nurtureher-carecircle-secure");
+        // No fabricated token: surface a real error so nobody scans an invalid code.
+        setToken("");
+        setQrPayload("");
+        setQrError("Could not load your CareCircle QR token. Check your connection and try again.");
       }
     } finally {
       setLoading(false);
@@ -212,6 +214,12 @@ export function CareCircleQRPage() {
                 </p>
 
                 {/* QR Code Container */}
+                {qrError ? (
+                  <div className="mx-auto my-6 flex h-60 w-60 flex-col items-center justify-center rounded-3xl border-2 border-dashed border-rose-300 bg-rose-50 p-4 text-center dark:border-rose-500/40 dark:bg-rose-500/10">
+                    <ShieldAlert className="mb-2 h-8 w-8 text-rose-500" />
+                    <p className="text-xs font-bold leading-5 text-rose-700 dark:text-rose-300">{qrError}</p>
+                  </div>
+                ) : (
                 <div className="mx-auto my-6 flex h-60 w-60 items-center justify-center rounded-3xl border-2 border-dashed border-lavender-300 bg-white p-4 shadow-soft dark:border-white/20 dark:bg-white">
                   <img
                     src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(qrPayload)}`}
@@ -219,6 +227,7 @@ export function CareCircleQRPage() {
                     className="h-full w-full rounded-2xl"
                   />
                 </div>
+                )}
 
                 <div className="flex items-center justify-center gap-2">
                   <Button variant="secondary" className="text-xs" onClick={copyLink}>
@@ -467,6 +476,95 @@ export function CareCircleQRPage() {
           )}
         </>
       )}
+    </Page>
+  );
+}
+
+/**
+ * Landing page for the CareCircle QR payload (/verify-access?token=...).
+ * It runs the real request-access flow instead of rendering a fabricated token.
+ */
+export function VerifyAccessPage() {
+  const [params] = useSearchParams();
+  const navigate = useNavigate();
+  const [token, setToken] = useState(params.get("token") ?? "");
+  const [relationship, setRelationship] = useState("Caregiver");
+  const [submitting, setSubmitting] = useState(false);
+  const [status, setStatus] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
+
+  async function requestAccess() {
+    if (!token.trim()) return;
+    setSubmitting(true);
+    setStatus(null);
+    try {
+      const response = await api.requestCareCircleAccess(token.trim(), relationship);
+      setStatus({
+        kind: "ok",
+        text: response.message || `Request recorded (${response.status}). The mother must approve it before any data is shared.`,
+      });
+    } catch (reason) {
+      setStatus({
+        kind: "error",
+        text: reason instanceof Error ? reason.message : "Access request could not be sent. Check the token and try again.",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Page title="CareCircle Access Request" subtitle="Enter the token from the mother's CareCircle QR to request consent-based access.">
+      <Card className="max-w-xl p-6">
+        <SectionHeader
+          title="Request access"
+          subtitle="No health data is shared until the mother approves this request in her CareCircle tab."
+        />
+        <div className="mt-5 space-y-4">
+          <div>
+            <label className="block text-xs font-bold text-ink dark:text-white" htmlFor="verify-token">
+              Access token
+            </label>
+            <Input
+              id="verify-token"
+              value={token}
+              onChange={(event) => setToken(event.target.value)}
+              placeholder="Paste the token from the QR code"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-ink dark:text-white" htmlFor="verify-relationship">
+              Your relationship
+            </label>
+            <Input
+              id="verify-relationship"
+              value={relationship}
+              onChange={(event) => setRelationship(event.target.value)}
+            />
+          </div>
+
+          {status ? (
+            <p
+              className={`rounded-xl px-3 py-2 text-xs font-bold ${
+                status.kind === "ok"
+                  ? "border border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200"
+                  : "border border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200"
+              }`}
+            >
+              {status.text}
+            </p>
+          ) : null}
+
+          <div className="flex justify-end gap-3">
+            <Button variant="secondary" onClick={() => navigate("/carecircle")}>
+              Back to my CareCircle
+            </Button>
+            <Button onClick={() => void requestAccess()} disabled={submitting || !token.trim()}>
+              <UserCheck className="mr-1.5 h-4 w-4" />
+              {submitting ? "Sending..." : "Request access"}
+            </Button>
+          </div>
+        </div>
+      </Card>
     </Page>
   );
 }

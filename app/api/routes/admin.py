@@ -23,6 +23,35 @@ admin_user = Depends(require_roles(UserRole.ADMIN))
 
 @router.get("/dashboard")
 async def dashboard(_: User = admin_user, db: AsyncSession = Depends(get_db)):
+    import json
+    from pathlib import Path
+
+    from app.core.config import settings
+    from app.ml.model_loader import pcos_model_source
+
+    # Real model status - never a fabricated accuracy or model name.
+    meta_path = Path(settings.pcos_model_json_path).with_name("pcos_model_meta.json")
+    pcos_meta: dict = {}
+    if meta_path.exists():
+        try:
+            pcos_meta = json.loads(meta_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):  # pragma: no cover - unreadable artifact is non-fatal
+            pcos_meta = {}
+    pcos_source = pcos_model_source()
+
+    from app.ml import sentiment as sentiment_module
+
+    transformer_loaded = sentiment_module._transformer_model is not None
+    if transformer_loaded:
+        sentiment_engine = "transformer"
+        sentiment_note = f"{settings.sentiment_model} loaded in this process"
+    elif not settings.sentiment_use_transformer:
+        sentiment_engine = "lexicon"
+        sentiment_note = "transformer disabled by SENTIMENT_USE_TRANSFORMER=false"
+    else:
+        sentiment_engine = "lexicon"
+        sentiment_note = "transformer configured but not loaded yet; lexicon served (it falls back automatically if torch is unavailable)"
+
     return {
         "users": await db.scalar(select(func.count()).select_from(User)) or 0,
         "pcos_predictions": await db.scalar(select(func.count()).select_from(PCOSPrediction)) or 0,
@@ -32,6 +61,34 @@ async def dashboard(_: User = admin_user, db: AsyncSession = Depends(get_db)):
         "high_risk_cases": await db.scalar(select(func.count()).select_from(HighRiskCase)) or 0,
         "alerts": await db.scalar(select(func.count()).select_from(Alert)) or 0,
         "audit_logs": await db.scalar(select(func.count()).select_from(AuditLog)) or 0,
+        "models": {
+            "pcos": {
+                "engine": pcos_source,
+                "uses_random_forest": pcos_source.startswith("random_forest"),
+                "metrics": pcos_meta.get("metrics"),
+                "dataset": pcos_meta.get("dataset"),
+                "dataset_citation": pcos_meta.get("citation"),
+                "trained_at": pcos_meta.get("trained_at"),
+                "samples": pcos_meta.get("samples"),
+            },
+            "ppd": {
+                "scoring": "EPDS 10-item (Cox 1987) + sentiment dual-signal",
+                "sentiment_engine": sentiment_engine,
+                "sentiment_note": sentiment_note,
+            },
+            "llm": {
+                "provider": "google-gemini",
+                "model": settings.gemini_model,
+                "api_key_configured": bool(settings.gemini_api_key),
+            },
+            "sms": {
+                "provider": settings.sms_provider,
+                "credentials_configured": bool(
+                    settings.twilio_account_sid and settings.twilio_auth_token and settings.twilio_from_number
+                )
+                or bool(settings.fast2sms_api_key),
+            },
+        },
     }
 
 

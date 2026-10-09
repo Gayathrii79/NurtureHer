@@ -1,4 +1,4 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import {
   Baby,
   HeartPulse,
@@ -65,6 +65,10 @@ export function AuthPage() {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  useEffect(() => {
+    document.title = `${registering ? t.auth.createAccount : t.auth.welcomeBack} | ${t.common.appName}`;
+  }, [registering, t.auth.createAccount, t.auth.welcomeBack, t.common.appName]);
+
   async function submit(event: FormEvent) {
     event.preventDefault();
     setError("");
@@ -90,7 +94,7 @@ export function AuthPage() {
     try {
       await signIn(account.email, account.password);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Demo login failed");
+      setError(reason instanceof Error ? reason.message : t.auth.authError);
     } finally {
       setSubmitting(false);
     }
@@ -134,18 +138,18 @@ export function AuthPage() {
               />
               <div>
                 <label className="mb-1 block text-xs font-bold text-ink dark:text-white">
-                  User Role / Function
+                  {t.ui.roleLabel}
                 </label>
                 <select
                   value={role}
                   onChange={(e) => setRole(e.target.value)}
                   className="h-10 w-full rounded-2xl border border-lavender-200 bg-white/80 px-3 text-xs font-semibold text-ink outline-none transition focus:border-primary dark:border-white/10 dark:bg-white/10 dark:text-white"
                 >
-                  <option value="mother">Mother (Personal Health & Screenings)</option>
-                  <option value="doctor">Doctor (Consultation & Clinical Roster)</option>
-                  <option value="asha_worker">ASHA Worker (Community Health Queue)</option>
-                  <option value="caregiver">Caregiver (Family Support & Monitoring)</option>
-                  <option value="admin">System Admin (Audit & User Management)</option>
+                  <option value="mother">{t.ui.motherRole} ({t.ui.motherRoleDescription})</option>
+                  <option value="doctor">{t.ui.doctorRole} ({t.ui.doctorRoleDescription})</option>
+                  <option value="asha_worker">{t.ui.ashaRole} ({t.ui.ashaRoleDescription})</option>
+                  <option value="caregiver">{t.ui.caregiverRole} ({t.ui.caregiverRoleDescription})</option>
+                  <option value="admin">{t.ui.adminRole} ({t.ui.adminRoleDescription})</option>
                 </select>
               </div>
             </>
@@ -188,9 +192,9 @@ export function AuthPage() {
         <div className="mt-8 border-t border-lavender-100 pt-5 dark:border-white/10">
           <div className="flex items-center justify-between">
             <span className="text-xs font-black uppercase tracking-wider text-muted dark:text-white/50">
-              ⚡ 1-Click Demo Access
+              ⚡ {t.ui.demoAccess}
             </span>
-            <span className="text-[11px] text-muted dark:text-white/40">Select role to sign in instantly</span>
+            <span className="text-[11px] text-muted dark:text-white/40">{t.ui.demoRolePrompt}</span>
           </div>
 
           <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -206,8 +210,8 @@ export function AuthPage() {
                 >
                   <Icon className="h-4 w-4 shrink-0" />
                   <div className="min-w-0">
-                    <p className="truncate text-xs font-black">{acc.role}</p>
-                    <p className="truncate text-[10px] opacity-70">1-click demo</p>
+                    <p className="truncate text-xs font-black">{acc.role === "Mother" ? t.ui.motherRole : acc.role === "Doctor" ? t.ui.doctorRole : acc.role === "ASHA Worker" ? t.ui.ashaRole : acc.role === "Caregiver" ? t.ui.caregiverRole : t.ui.adminRole}</p>
+                    <p className="truncate text-[10px] opacity-70">{t.ui.demoOneClick}</p>
                   </div>
                 </button>
               );

@@ -13,7 +13,6 @@ class KnowledgeBaseDocumentLoader:
                 "id": entry.id,
                 "category": entry.category,
                 "title": entry.title,
-                "source": getattr(entry, "source", "Clinical Practice Standard"),
                 "language": entry.language,
             },
         )

@@ -1,4 +1,4 @@
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000/api/v1";
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "/api/v1";
 
 export type UserRole = "mother" | "caregiver" | "asha_worker" | "doctor" | "admin";
 
@@ -19,11 +19,49 @@ export type Symptom = { id: string; fatigue: boolean; headache: boolean; sleep_i
 export type Journal = { id: string; title: string; content: string; created_at: string };
 export type Cycle = { id: string; last_period_date: string; cycle_length: number; next_period_prediction: string; created_at: string };
 export type CyclePrediction = Cycle & { ovulation_prediction: string; fertility_window_start: string; fertility_window_end: string };
-export type PCOSPrediction = { id: string; risk_level: string; probability: number; recommendations: string; created_at: string };
-export type PPDAssessment = { id: string; epds_score: number; sentiment: string; risk_level: string; created_at: string };
+export type PCOSModelSource = "random_forest_pickle" | "random_forest_json" | "rule_fallback";
+export type PCOSPrediction = {
+  id: string;
+  risk_level: string;
+  probability: number;
+  recommendations: string;
+  created_at: string;
+  model_source?: PCOSModelSource | null;
+};
+export type PCOSModelInfo = {
+  model_source: PCOSModelSource;
+  uses_random_forest: boolean;
+  metrics: Record<string, number> | null;
+  dataset: string | null;
+  dataset_citation: string | null;
+  trained_at: string | null;
+  samples: number | null;
+};
+export type PPDAssessment = {
+  id: string;
+  epds_score: number;
+  sentiment: string;
+  sentiment_score?: number;
+  combined_risk_score?: number;
+  risk_level: string;
+  recommendations?: string | null;
+  created_at: string;
+};
 export type ChatMessage = { id: string; message: string; response: string; language: string; created_at: string };
 export type CaregiverContent = { id: string; title: string; description: string; video_url: string | null; category: string; created_at: string };
-export type HighRiskCase = { id: string; user_id: string; risk_type: string; risk_level: string; assigned_worker_id: string | null; status: string; created_at: string };
+export type HighRiskCase = {
+  id: string;
+  user_id: string;
+  risk_type: string;
+  risk_level: string;
+  assigned_worker_id: string | null;
+  status: string;
+  created_at: string;
+  mother_name?: string | null;
+  mother_phone?: string | null;
+  district?: string | null;
+  village?: string | null;
+};
 export type Alert = { id: string; user_id: string; message: string; sent_status: string; sent_at: string | null };
 export type DashboardStats = { today_mood: Mood | null; symptoms: Symptom | null; cycle_prediction: string | null; pcos_risk: string | null; ppd_status: string | null };
 export type WellnessInsight = { category: string; severity: string; message: string };
@@ -59,6 +97,30 @@ export type ReportItem = {
   recommendations?: string;
   sentiment?: string;
   status: string;
+};
+
+export type WellnessAnalytics = {
+  mood_trends: Record<string, number>;
+  symptom_trends: Record<string, number>;
+  cycle_insights: {
+    last_period_date: string | null;
+    next_period_prediction: string | null;
+    cycle_length: number | null;
+    cycle_entries: number;
+    average_cycle_length: number | null;
+    regularity_range_days: number | null;
+    regularity: string | null;
+  };
+  pcos_history: Record<string, number>;
+  pcos_latest: { risk_level: string | null; probability: number | null; recommendations: string | null };
+  ppd_history: Record<string, number>;
+  ppd_latest: { risk_level: string | null; epds_score: number | null; sentiment: string | null };
+};
+
+export type EmergencySosResponse = {
+  alerts: { recipient: string; alerted: boolean; sent_status: string }[];
+  emergency_numbers: string[];
+  message: string;
 };
 
 export type NutritionPlanItem = {
@@ -174,12 +236,13 @@ export const api = {
 
   // Wellness & Health Profile
   dashboard: () => request<DashboardStats>("/wellness/dashboard"),
-  analytics: () => request<Record<string, unknown>>("/wellness/analytics"),
+  analytics: () => request<WellnessAnalytics>("/wellness/analytics"),
   insights: () => request<{ insights: WellnessInsight[] }>("/wellness/insights"),
   profile: () => request<Profile>("/wellness/profile"),
   updateProfile: (payload: Partial<Profile>) => request<Profile>("/wellness/profile", { method: "PUT", body: JSON.stringify(payload) }),
   doctorVisitSummary: () => request<DoctorVisitSummary>("/wellness/doctor-visit-summary", { method: "POST" }),
   reports: () => request<{ count: number; reports: ReportItem[]; disclaimer: string }>("/wellness/reports"),
+  emergencySos: () => request<EmergencySosResponse>("/wellness/emergency-sos", { method: "POST" }),
 
   // Moods & Symptoms & Journal
   moods: () => request<Mood[]>("/wellness/mood"),
@@ -195,6 +258,7 @@ export const api = {
   createCycle: (last_period_date: string, cycle_length: number) => request<Cycle>("/cycle", { method: "POST", body: JSON.stringify({ last_period_date, cycle_length }) }),
 
   // Screenings
+  pcosModelInfo: () => request<PCOSModelInfo>("/pcos/model-info"),
   pcosHistory: () => request<PCOSPrediction[]>("/pcos/history"),
   predictPCOS: (payload: Record<string, unknown>) => request<PCOSPrediction>("/pcos/predict", { method: "POST", body: JSON.stringify(payload) }),
   ppdHistory: () => request<PPDAssessment[]>("/ppd/history"),
@@ -232,6 +296,10 @@ export const api = {
   ashaCases: (query = "") => request<HighRiskCase[]>(`/asha/high-risk${query}`),
   ashaStatistics: () => request<Record<string, unknown>>("/asha/statistics"),
   ashaAlerts: () => request<Alert[]>("/asha/alerts"),
+  ashaUpdateCase: (caseId: string, payload: { status?: string; assigned_worker_id?: string | null }) =>
+    request<HighRiskCase>(`/asha/high-risk/${caseId}`, { method: "PATCH", body: JSON.stringify(payload) }),
+  ashaSendAlert: (userId: string, message: string) =>
+    request<Alert>("/asha/send-alert", { method: "POST", body: JSON.stringify({ user_id: userId, message }) }),
 
   // Admin
   adminUsers: () => request<User[]>("/admin/users"),
@@ -240,7 +308,35 @@ export const api = {
 
   // Notifications
   notifications: () => request<Alert[]>("/notifications"),
+
+  // Account settings
+  updateMe: (payload: { name?: string; phone?: string; preferred_language?: string }) =>
+    request<User>("/auth/me", { method: "PATCH", body: JSON.stringify(payload) }),
 };
+
+/** Download the server-generated PDF health report as a real file (no fake success message). */
+export async function downloadHealthReportPdf(): Promise<string> {
+  const response = await fetch(`${API_BASE}/wellness/report/pdf`, {
+    headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
+  });
+  if (!response.ok) {
+    const detail = await response.json().catch(() => ({ detail: response.statusText }));
+    throw new Error(detail.detail ?? "Report generation failed");
+  }
+  const blob = await response.blob();
+  const disposition = response.headers.get("Content-Disposition") ?? "";
+  const match = /filename="?([^";]+)"?/.exec(disposition);
+  const filename = match?.[1] ?? "nurtureher-health-report.pdf";
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+  return filename;
+}
 
 export async function uploadVoice(file: File, language: string) {
   const form = new FormData();

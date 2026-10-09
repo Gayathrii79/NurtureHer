@@ -4,7 +4,6 @@ import {
   Heart,
   Mic,
   MicOff,
-  Paperclip,
   Send,
   Sparkles,
   ThumbsUp,
@@ -75,7 +74,7 @@ export function Coach() {
       (window as unknown as { webkitSpeechRecognition?: new () => SpeechRecognitionInstance }).webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
-      alert("Speech recognition is not supported in this browser. Please use Chrome, Edge, or Safari.");
+      alert(t.ui.speechUnsupported);
       return;
     }
 
@@ -84,9 +83,7 @@ export function Coach() {
     recognition.interimResults = false;
 
     // Match selected UI language
-    if (language === "hi") recognition.lang = "hi-IN";
-    else if (language === "kn") recognition.lang = "kn-IN";
-    else recognition.lang = "en-IN";
+    recognition.lang = ({ en: "en-IN", hi: "hi-IN", kn: "kn-IN", ta: "ta-IN", te: "te-IN", ml: "ml-IN" })[language];
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
       const transcript = event.results[0][0].transcript;
@@ -118,9 +115,7 @@ export function Coach() {
     const cleanText = text.replace(/[#*_`~-]/g, ""); // Strip markdown symbols
     const utterance = new SpeechSynthesisUtterance(cleanText);
 
-    if (language === "hi") utterance.lang = "hi-IN";
-    else if (language === "kn") utterance.lang = "kn-IN";
-    else utterance.lang = "en-IN";
+    utterance.lang = ({ en: "en-IN", hi: "hi-IN", kn: "kn-IN", ta: "ta-IN", te: "te-IN", ml: "ml-IN" })[language];
 
     utterance.onend = () => setCurrentlySpeakingId(null);
     utterance.onerror = () => setCurrentlySpeakingId(null);
@@ -151,8 +146,7 @@ export function Coach() {
       <div className="mb-6 flex items-start gap-2.5 rounded-2xl border border-lavender-200 bg-lavender-50/70 p-3.5 text-xs text-lavender-900 shadow-xs dark:border-lavender-800/40 dark:bg-lavender-950/40 dark:text-lavender-200">
         <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
         <div>
-          <span className="font-bold">Multilingual AI Coach:</span> Responses are grounded in verified WHO maternal
-          health guidelines and ICMR nutritional references. For acute medical emergencies, call 112 immediately.
+          <span className="font-bold">{t.ui.multilingualCoach}</span> {t.ui.coachDisclaimer}
         </div>
       </div>
 
@@ -176,7 +170,7 @@ export function Coach() {
 
               <div className="flex items-center gap-2">
                 <Badge variant="outline" className="border-lavender-300 text-primary">
-                  WHO & ICMR Grounded
+                  {t.ui.whoIcmrGrounded}
                 </Badge>
               </div>
             </div>
@@ -203,9 +197,9 @@ export function Coach() {
                     {/* Grounding Source Attribution Tag */}
                     <div className="mt-3 flex items-center gap-2 border-t border-lavender-100/70 pt-2 text-[10px] text-muted dark:border-white/10 dark:text-white/50">
                       <span className="rounded bg-lavender-100 px-1.5 py-0.5 font-bold text-primary dark:bg-white/10">
-                        Evidence Grounded
+                        {t.ui.evidenceGrounded}
                       </span>
-                      <span>WHO Maternal Guideline · NurtureHer Clinical RAG</span>
+                      <span>{t.ui.whoClinicalRag}</span>
                     </div>
                   </div>
 
@@ -218,15 +212,15 @@ export function Coach() {
                           ? "border-primary bg-primary text-white"
                           : "border-lavender-100 bg-white text-muted hover:text-primary dark:border-white/10 dark:bg-white/10 dark:text-white/60"
                       }`}
-                      aria-label="Listen to audio speech"
+                      aria-label={currentlySpeakingId === item.id ? t.ui.stopAudio : t.ui.listenResponse}
                     >
                       {currentlySpeakingId === item.id ? (
                         <>
-                          <VolumeX className="h-3 w-3" /> Stop
+                          <VolumeX className="h-3 w-3" /> {t.ui.stopAudio}
                         </>
                       ) : (
                         <>
-                          <Volume2 className="h-3 w-3" /> Listen
+                          <Volume2 className="h-3 w-3" /> {t.ui.listenResponse}
                         </>
                       )}
                     </button>
@@ -252,7 +246,7 @@ export function Coach() {
               <div className="rounded-2xl border border-dashed border-lavender-200 p-8 text-center text-xs text-muted dark:border-white/10">
                 <Bot className="mx-auto mb-2 h-8 w-8 text-primary/60" />
                 <p className="font-bold">{t.coach.noConversations}</p>
-                <p className="mt-1 text-[11px]">Ask about pregnancy symptoms, nutrition, cycle health, or emotional wellbeing.</p>
+                <p className="mt-1 text-[11px]">{t.ui.suggestedQuestionPrompt}</p>
               </div>
             ) : null}
 
@@ -295,7 +289,7 @@ export function Coach() {
                   }
                 }}
                 className="min-w-0 flex-1 bg-transparent px-3 text-xs outline-none dark:text-white sm:text-sm"
-                placeholder={isListening ? "Listening... speak clearly" : t.coach.inputPlaceholder}
+                placeholder={isListening ? t.ui.speechListening : t.coach.inputPlaceholder}
               />
 
               {/* STT Microphone Button */}
@@ -303,9 +297,9 @@ export function Coach() {
                 type="button"
                 variant={isListening ? "primary" : "ghost"}
                 className={`h-10 w-10 shrink-0 px-0 rounded-xl ${isListening ? "animate-pulse bg-rose-600 hover:bg-rose-700 text-white" : ""}`}
-                aria-label={isListening ? "Stop voice listening" : t.coach.voiceInput}
+                aria-label={isListening ? t.ui.stopListening : t.coach.voiceInput}
                 onClick={toggleListening}
-                title={isListening ? "Click to stop listening" : "Voice input (English, Hindi, Kannada)"}
+                title={isListening ? t.ui.stopListening : t.coach.voiceInput}
               >
                 {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
               </Button>

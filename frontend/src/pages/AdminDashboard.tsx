@@ -7,11 +7,8 @@ import {
   Database,
   FileText,
   HeartPulse,
-  Lock,
-  MessageCircle,
   RefreshCw,
   Search,
-  Server,
   Shield,
   ShieldAlert,
   UserCheck,
@@ -22,8 +19,45 @@ import { api, User } from "@/lib/api";
 import { Page } from "@/components/common/Page";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { LoadingSkeleton, EmptyState } from "@/components/common/States";
+import { LoadingSkeleton } from "@/components/common/States";
+
+interface AdminModelStats {
+  pcos?: {
+    engine?: string;
+    uses_random_forest?: boolean;
+    metrics?: Record<string, number> | null;
+    dataset?: string | null;
+    dataset_citation?: string | null;
+    trained_at?: string | null;
+    samples?: number | null;
+  };
+  ppd?: {
+    scoring?: string;
+    sentiment_engine?: string;
+    sentiment_note?: string;
+  };
+  llm?: {
+    provider?: string;
+    model?: string;
+    api_key_configured?: boolean;
+  };
+  sms?: {
+    provider?: string;
+    credentials_configured?: boolean;
+  };
+}
+
+function StatusPill({ ok, okLabel, warnLabel }: { ok: boolean; okLabel: string; warnLabel: string }) {
+  return (
+    <span className={`flex items-center gap-1 text-xs font-bold ${ok ? "text-emerald-600" : "text-amber-600"}`}>
+      {ok ? <CheckCircle className="h-3.5 w-3.5" /> : <AlertTriangle className="h-3.5 w-3.5" />}
+      {ok ? okLabel : warnLabel}
+    </span>
+  );
+}
+
+const fmtPct = (value: unknown): string => (typeof value === "number" ? `${(value * 100).toFixed(1)}%` : "—");
+const fmtNum = (value: unknown): string => (typeof value === "number" ? value.toFixed(4) : "—");
 
 interface AdminDashboardStats {
   users: number;
@@ -34,6 +68,7 @@ interface AdminDashboardStats {
   high_risk_cases: number;
   alerts: number;
   audit_logs: number;
+  models?: AdminModelStats;
 }
 
 interface AuditLogEntry {
@@ -388,8 +423,8 @@ export function AdminDashboard() {
           </div>
         </Card>
       ) : (
-        /* AI Models Tab */
-        <div className="grid gap-6 md:grid-cols-3">
+        /* AI Models Tab - renders the real `models` block served by GET /admin/dashboard */
+        <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
           <Card className="p-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -398,27 +433,38 @@ export function AdminDashboard() {
                 </span>
                 <div>
                   <h3 className="text-sm font-black text-ink dark:text-white">PCOS Classifier</h3>
-                  <p className="text-[11px] text-muted">XGBoost & Clinical Biomarkers</p>
+                  <p className="text-[11px] text-muted">{stats?.models?.pcos?.engine ?? "model unavailable"}</p>
                 </div>
               </div>
-              <span className="flex items-center gap-1 text-xs font-bold text-emerald-600">
-                <CheckCircle className="h-3.5 w-3.5" /> Online
-              </span>
+              <StatusPill
+                ok={Boolean(stats?.models?.pcos?.metrics)}
+                okLabel="Metrics on file"
+                warnLabel="Not trained"
+              />
             </div>
             <div className="mt-4 space-y-2 rounded-xl bg-lavender-50/50 p-3 text-xs text-muted dark:bg-white/5 dark:text-white/60">
               <div className="flex justify-between">
-                <span>Validation Accuracy:</span>
-                <span className="font-bold text-ink dark:text-white">92.4%</span>
+                <span>Validation accuracy:</span>
+                <span className="font-bold text-ink dark:text-white">{fmtPct(stats?.models?.pcos?.metrics?.accuracy)}</span>
               </div>
               <div className="flex justify-between">
                 <span>ROC-AUC:</span>
-                <span className="font-bold text-ink dark:text-white">0.941</span>
+                <span className="font-bold text-ink dark:text-white">{fmtNum(stats?.models?.pcos?.metrics?.roc_auc)}</span>
               </div>
               <div className="flex justify-between">
-                <span>Feature Imputations:</span>
-                <span className="font-bold text-ink dark:text-white">Enabled (Median fallback)</span>
+                <span>CV accuracy (mean):</span>
+                <span className="font-bold text-ink dark:text-white">{fmtPct(stats?.models?.pcos?.metrics?.cv_accuracy_mean)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Training samples:</span>
+                <span className="font-bold text-ink dark:text-white">{stats?.models?.pcos?.samples ?? "—"}</span>
               </div>
             </div>
+            {stats?.models?.pcos?.dataset_citation ? (
+              <p className="mt-3 break-words text-[10px] leading-relaxed text-muted">
+                Source: {stats.models.pcos.dataset ?? "unknown dataset"} · {stats.models.pcos.dataset_citation}
+              </p>
+            ) : null}
           </Card>
 
           <Card className="p-6">
@@ -428,28 +474,31 @@ export function AdminDashboard() {
                   <Activity className="h-5 w-5" />
                 </span>
                 <div>
-                  <h3 className="text-sm font-black text-ink dark:text-white">PPD NLP Engine</h3>
-                  <p className="text-[11px] text-muted">EPDS Scoring + Sentiment Analysis</p>
+                  <h3 className="text-sm font-black text-ink dark:text-white">PPD Screening (EPDS)</h3>
+                  <p className="text-[11px] text-muted">{stats?.models?.ppd?.scoring ?? "—"}</p>
                 </div>
               </div>
-              <span className="flex items-center gap-1 text-xs font-bold text-emerald-600">
-                <CheckCircle className="h-3.5 w-3.5" /> Online
-              </span>
+              <StatusPill
+                ok={stats?.models?.ppd?.sentiment_engine === "transformer"}
+                okLabel="Transformer"
+                warnLabel="Lexicon"
+              />
             </div>
             <div className="mt-4 space-y-2 rounded-xl bg-lavender-50/50 p-3 text-xs text-muted dark:bg-white/5 dark:text-white/60">
               <div className="flex justify-between">
-                <span>EPDS Cutoff Threshold:</span>
-                <span className="font-bold text-ink dark:text-white">10/30 (High Risk)</span>
+                <span>Sentiment engine:</span>
+                <span className="font-bold text-ink dark:text-white">{stats?.models?.ppd?.sentiment_engine ?? "—"}</span>
               </div>
               <div className="flex justify-between">
-                <span>Sentiment Model:</span>
-                <span className="font-bold text-ink dark:text-white">DistilRoBERTa Clinical</span>
+                <span>Cutoffs:</span>
+                <span className="font-bold text-ink dark:text-white">High ≥13 · Moderate ≥10</span>
               </div>
               <div className="flex justify-between">
-                <span>Harm Alert Escalation:</span>
-                <span className="font-bold text-ink dark:text-white">Automated SMS/ASHA</span>
+                <span>Item 10 (self-harm):</span>
+                <span className="font-bold text-ink dark:text-white">Any positive → High</span>
               </div>
             </div>
+            <p className="mt-3 text-[10px] leading-relaxed text-muted">{stats?.models?.ppd?.sentiment_note ?? ""}</p>
           </Card>
 
           <Card className="p-6">
@@ -460,27 +509,66 @@ export function AdminDashboard() {
                 </span>
                 <div>
                   <h3 className="text-sm font-black text-ink dark:text-white">RAG Health Coach</h3>
-                  <p className="text-[11px] text-muted">Multilingual Maternal RAG</p>
+                  <p className="text-[11px] text-muted">{stats?.models?.llm?.model ?? "model unset"}</p>
                 </div>
               </div>
-              <span className="flex items-center gap-1 text-xs font-bold text-emerald-600">
-                <CheckCircle className="h-3.5 w-3.5" /> Online
-              </span>
+              <StatusPill
+                ok={Boolean(stats?.models?.llm?.api_key_configured)}
+                okLabel="Key configured"
+                warnLabel="Key missing"
+              />
             </div>
             <div className="mt-4 space-y-2 rounded-xl bg-lavender-50/50 p-3 text-xs text-muted dark:bg-white/5 dark:text-white/60">
               <div className="flex justify-between">
-                <span>LLM Engine:</span>
-                <span className="font-bold text-ink dark:text-white">Gemini 2.5 Flash / Omni</span>
+                <span>Provider:</span>
+                <span className="font-bold text-ink dark:text-white">{stats?.models?.llm?.provider ?? "—"}</span>
               </div>
               <div className="flex justify-between">
-                <span>Knowledge Corpus:</span>
-                <span className="font-bold text-ink dark:text-white">WHO / ICMR Maternal Guidelines</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Languages:</span>
-                <span className="font-bold text-ink dark:text-white">English, Hindi, Kannada</span>
+                <span>API key:</span>
+                <span className="font-bold text-ink dark:text-white">
+                  {stats?.models?.llm?.api_key_configured ? "Configured" : "Not configured"}
+                </span>
               </div>
             </div>
+            <p className="mt-3 text-[10px] leading-relaxed text-muted">
+              Chat responses need the GEMINI_API_KEY environment variable and internet access; without them the coach
+              reports that it is unavailable.
+            </p>
+          </Card>
+
+          <Card className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-amber-100 text-amber-600 dark:bg-amber-900/50">
+                  <ShieldAlert className="h-5 w-5" />
+                </span>
+                <div>
+                  <h3 className="text-sm font-black text-ink dark:text-white">SMS Alerts</h3>
+                  <p className="text-[11px] text-muted">{stats?.models?.sms?.provider ?? "provider unset"}</p>
+                </div>
+              </div>
+              <StatusPill
+                ok={Boolean(stats?.models?.sms?.credentials_configured)}
+                okLabel="Credentials set"
+                warnLabel="Not configured"
+              />
+            </div>
+            <div className="mt-4 space-y-2 rounded-xl bg-lavender-50/50 p-3 text-xs text-muted dark:bg-white/5 dark:text-white/60">
+              <div className="flex justify-between">
+                <span>Provider:</span>
+                <span className="font-bold text-ink dark:text-white">{stats?.models?.sms?.provider ?? "—"}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Credentials:</span>
+                <span className="font-bold text-ink dark:text-white">
+                  {stats?.models?.sms?.credentials_configured ? "Configured" : "Not configured"}
+                </span>
+              </div>
+            </div>
+            <p className="mt-3 text-[10px] leading-relaxed text-muted">
+              Alerts are stored in the database and queued for a Celery worker; without one they report{" "}
+              <span className="font-bold">queued_no_worker</span> and are never marked as sent.
+            </p>
           </Card>
         </div>
       )}

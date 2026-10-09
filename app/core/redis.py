@@ -8,7 +8,11 @@ logger = logging.getLogger(__name__)
 
 class SafeRedis:
     def __init__(self, url: str) -> None:
-        self._client = Redis.from_url(url, decode_responses=True)
+        # Bounded timeouts: when Redis is unreachable every call must fail fast
+        # instead of stalling auth/notifications for OS-level connect timeouts.
+        self._client = Redis.from_url(
+            url, decode_responses=True, socket_connect_timeout=2, socket_timeout=2
+        )
 
     async def get(self, name: str):
         try:

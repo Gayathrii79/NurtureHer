@@ -14,6 +14,7 @@ from app.schemas.auth import (
     TokenPair,
     UserCreate,
     UserRead,
+    UserUpdate,
 )
 from app.schemas.common import MessageResponse
 from app.services.auth import AuthService
@@ -66,4 +67,15 @@ async def change_password(
 
 @router.get("/me", response_model=UserRead)
 async def me(user: User = Depends(get_current_user)):
+    return user
+
+
+@router.patch("/me", response_model=UserRead)
+async def update_me(payload: UserUpdate, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """Update the caller's own account fields (name, phone, preferred language)."""
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        setattr(user, field, value)
+    db.add(user)
+    await db.commit()
+    await db.refresh(user)
     return user

@@ -1,6 +1,7 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from fastapi import APIRouter, status
+from sqlalchemy import text
 from starlette.responses import JSONResponse
 
 from app.core.database import AsyncSessionLocal
@@ -19,7 +20,7 @@ async def readiness():
     checks = {"database": False, "redis": False}
     try:
         async with AsyncSessionLocal() as db:
-            await db.command("ping")
+            await db.execute(text("SELECT 1"))
             checks["database"] = True
     except Exception:
         checks["database"] = False

@@ -1,14 +1,15 @@
-from typing import Any
 from uuid import UUID
 
 from fastapi import status
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppError
 from app.ml.prediction_service import PCOSPredictionService
 from app.models.asha import HighRiskCase
 from app.models.caregiver import CaregiverContent
 from app.models.enums import CaseStatus, RiskLevel
-from app.models.user import User
+from app.models.user import MotherProfile, User
 from app.repositories.health import CaregiverContentRepository, HighRiskRepository, PCOSRepository, PPDRepository
 from app.schemas.health import CaregiverContentCreate, CaregiverContentUpdate, HighRiskCaseUpdate, PCOSPredictRequest, PPDAssessmentRequest
 from app.services.chat_service import ChatbotService
@@ -17,7 +18,7 @@ from app.services.risk import RiskService
 
 
 class PCOSService:
-    def __init__(self, db: Any) -> None:
+    def __init__(self, db: AsyncSession) -> None:
         self.db = db
         self.prediction_service = PCOSPredictionService()
 
@@ -38,19 +39,37 @@ class PCOSService:
 
 
 class PPDService:
-    def __init__(self, db: Any) -> None:
+    def __init__(self, db: AsyncSession) -> None:
         self.db = db
         self.detector = PPDRiskDetectionService()
 
     async def assess(self, user: User, payload: PPDAssessmentRequest):
-        score, sentiment, risk = self.detector.assess(payload)
+        # Compute average sentiment from recent journals (last 7 days) if available
+        from datetime import datetime, timedelta, timezone
+        from app.repositories.wellness import JournalRepository
+        from app.ml.sentiment import analyze_sentiment_detailed
+
+        journal_sentiment_prob: float | None = None
+        recent_cutoff = datetime.now(timezone.utc) - timedelta(days=7)
+        recent_journals = await JournalRepository(self.db).for_user(user.id, limit=10, offset=0)
+        recent_journals = [j for j in recent_journals if j.created_at >= recent_cutoff]
+        if recent_journals:
+            sentiment_probs = [analyze_sentiment_detailed(j.content).negative_prob for j in recent_journals]
+            journal_sentiment_prob = round(sum(sentiment_probs) / len(sentiment_probs), 3)
+
+        score, sentiment_label, sentiment_score, combined_risk_score, risk, recommendations = self.detector.assess(
+            payload, journal_sentiment_prob
+        )
         assessment = await PPDRepository(self.db).create(
             user_id=user.id,
             epds_score=score,
-            sentiment=sentiment,
+            sentiment=sentiment_label,
+            sentiment_score=sentiment_score,
+            combined_risk_score=combined_risk_score,
             risk_level=risk,
+            recommendations=recommendations,
         )
-        await RiskService(self.db).handle_high_risk(user, "ppd", risk, f"EPDS score {score}; sentiment {sentiment}")
+        await RiskService(self.db).handle_high_risk(user, "ppd", risk, f"EPDS {score}; combined risk {combined_risk_score:.2f}")
         await self.db.commit()
         return assessment
 
@@ -62,7 +81,7 @@ ChatService = ChatbotService
 
 
 class CaregiverService:
-    def __init__(self, db: Any) -> None:
+    def __init__(self, db: AsyncSession) -> None:
         self.db = db
 
     async def content(self, category: str, limit: int = 50, offset: int = 0) -> list[CaregiverContent]:
@@ -98,7 +117,7 @@ class CaregiverService:
 
 
 class AshaService:
-    def __init__(self, db: Any) -> None:
+    def __init__(self, db: AsyncSession) -> None:
         self.db = db
 
     async def high_risk_cases(
@@ -112,8 +131,13 @@ class AshaService:
         assigned_worker_id: UUID | None = None,
         limit: int = 50,
         offset: int = 0,
-    ) -> list[HighRiskCase]:
-        return await HighRiskRepository(self.db).open_cases(
+    ) -> list[dict]:
+        """Return the triage queue enriched with the mother's identity and location.
+
+        The ASHA/ANM dashboard must show who the case belongs to, not a bare UUID, so the
+        linked user and profile are fetched in bulk (2 queries, no lazy loading).
+        """
+        cases = await HighRiskRepository(self.db).open_cases(
             risk_level=risk_level,
             status=status,
             search=search,
@@ -124,6 +148,39 @@ class AshaService:
             limit=limit,
             offset=offset,
         )
+        if not cases:
+            return []
+
+        user_ids = {case.user_id for case in cases}
+        users = {
+            user.id: user
+            for user in (await self.db.execute(select(User).where(User.id.in_(user_ids)))).scalars().all()
+        }
+        profiles = {
+            profile.user_id: profile
+            for profile in (await self.db.execute(select(MotherProfile).where(MotherProfile.user_id.in_(user_ids)))).scalars().all()
+        }
+
+        enriched: list[dict] = []
+        for case in cases:
+            mother = users.get(case.user_id)
+            profile = profiles.get(case.user_id)
+            enriched.append(
+                {
+                    "id": case.id,
+                    "user_id": case.user_id,
+                    "risk_type": case.risk_type,
+                    "risk_level": case.risk_level,
+                    "assigned_worker_id": case.assigned_worker_id,
+                    "status": case.status,
+                    "created_at": case.created_at,
+                    "mother_name": mother.name if mother else None,
+                    "mother_phone": mother.phone if mother else None,
+                    "district": profile.district if profile else None,
+                    "village": profile.village if profile else None,
+                }
+            )
+        return enriched
 
     async def update_high_risk_case(self, case_id: UUID, payload: HighRiskCaseUpdate) -> HighRiskCase:
         repo = HighRiskRepository(self.db)
@@ -135,8 +192,7 @@ class AshaService:
         return case
 
     async def statistics(self) -> dict[str, int]:
-        col = getattr(self.db, "high_risk_cases", None) or self.db["high_risk_cases"]
-        total = await col.count_documents({"deleted_at": None})
-        high = await col.count_documents({"risk_level": "high", "deleted_at": None})
-        moderate = await col.count_documents({"risk_level": "moderate", "deleted_at": None})
-        return {"total_cases": total, "high_risk": high, "moderate_risk": moderate}
+        total = await self.db.scalar(select(func.count()).select_from(HighRiskCase))
+        high = await self.db.scalar(select(func.count()).select_from(HighRiskCase).where(HighRiskCase.risk_level == RiskLevel.HIGH))
+        moderate = await self.db.scalar(select(func.count()).select_from(HighRiskCase).where(HighRiskCase.risk_level == RiskLevel.MODERATE))
+        return {"total_cases": total or 0, "high_risk": high or 0, "moderate_risk": moderate or 0}

@@ -1,18 +1,15 @@
-import { Calendar, Download, FileText, HelpCircle, Lightbulb, RefreshCw, ShieldAlert, Sparkles, Stethoscope } from "lucide-react";
+import { Download, HelpCircle, RefreshCw, ShieldAlert, Stethoscope } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api, DoctorVisitSummary } from "@/lib/api";
-import { useAuth } from "@/context/useAuth";
-import { useLanguage } from "@/context/useLanguage";
 import { Page } from "@/components/common/Page";
 import { SectionHeader } from "@/components/common/Premium";
 import { LoadingSkeleton } from "@/components/common/States";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { printOrSaveClinicalReport } from "@/lib/reportPdf";
+import { useLanguage } from "@/context/useLanguage";
 
 export function DoctorVisitAssistant() {
-  const { user } = useAuth();
   const { t } = useLanguage();
   const [summary, setSummary] = useState<DoctorVisitSummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -47,7 +44,7 @@ export function DoctorVisitAssistant() {
   function handleDownloadPDF() {
     if (!summary) return;
     printOrSaveClinicalReport({
-      reportTitle: "Doctor-Visit Clinical Consultation Brief",
+      reportTitle: t.ui.consultationBrief,
       reportType: "Doctor Visit Summary",
       patientName: summary.patient_name,
       patientAge: summary.age,
@@ -55,34 +52,34 @@ export function DoctorVisitAssistant() {
       emergencyContact: summary.emergency_contact,
       dateGenerated: summary.generated_at,
       primaryMetric: {
-        label: "Primary Clinical Profile",
-        value: summary.pregnancy_stage || "General Wellness",
+        label: t.ui.longitudinalOverview,
+        value: summary.pregnancy_stage || t.ui.generalWellness,
         riskCategory: summary.summary.ppd_screening.risk_level || summary.summary.pcos_screening.risk_level || "LOW",
       },
       contributingFactors: [
         {
-          label: "PCOS Screening Status",
-          value: `${summary.summary.pcos_screening.risk_level.toUpperCase()} RISK`,
+          label: t.ui.pcosClinicalStatus,
+          value: `${summary.summary.pcos_screening.risk_level.toUpperCase()} ${t.ui.riskSuffix}`,
           note: summary.summary.pcos_screening.notes,
         },
         {
-          label: "Postpartum Depression (EPDS)",
-          value: `${summary.summary.ppd_screening.risk_level.toUpperCase()} RISK`,
-          note: summary.summary.ppd_screening.sentiment ? `Sentiment: ${summary.summary.ppd_screening.sentiment}` : undefined,
+          label: t.ui.postpartumMentalHealth,
+          value: `${summary.summary.ppd_screening.risk_level.toUpperCase()} ${t.ui.riskSuffix}`,
+          note: summary.summary.ppd_screening.sentiment ? `${t.ui.sentimentPrefix} ${summary.summary.ppd_screening.sentiment}` : undefined,
         },
         {
-          label: "Fatigue Frequency (Last 7 Days)",
-          value: `${summary.summary.symptom_frequency_last_7_days.fatigue_days ?? 0} days recorded`,
+          label: t.ui.fatigueDays,
+          value: `${summary.summary.symptom_frequency_last_7_days.fatigue_days ?? 0} ${t.ui.recordedDays}`,
         },
         {
-          label: "Sleep Disruption (Last 7 Days)",
-          value: `${summary.summary.symptom_frequency_last_7_days.sleep_issue_days ?? 0} days recorded`,
+          label: t.ui.sleepIssues,
+          value: `${summary.summary.symptom_frequency_last_7_days.sleep_issue_days ?? 0} ${t.ui.recordedDays}`,
         },
       ],
       clinicalRecommendations: [
-        "Present this structured overview to your obstetrician or consulting physician.",
-        "Review questions generated below regarding your reported symptom trends.",
-        "Remember this AI brief is for appointment preparation and not a clinical diagnosis.",
+        t.ui.consultationSummaryText,
+        t.ui.importantDoctorQuestions,
+        t.ui.clinicalSafetyDisclaimer,
       ],
       doctorQuestions: summary.questions_to_ask_doctor,
       suggestedRecords: summary.suggested_records_to_bring,
@@ -91,8 +88,8 @@ export function DoctorVisitAssistant() {
 
   return (
     <Page
-      title="AI Doctor-Visit Assistant"
-      subtitle="Automated clinical synthesis of your recent symptoms, mood patterns, and screening history"
+      title={t.ui.doctorVisitTitle}
+      subtitle={t.ui.doctorVisitSubtitle}
     >
       {/* Overview Banner */}
       <div className="mb-6 rounded-[24px] border border-lavender-200/80 bg-gradient-to-br from-lavender-100/90 via-white to-lavender-50/70 p-6 shadow-soft dark:border-white/10 dark:from-white/10 dark:to-white/5">
@@ -102,10 +99,10 @@ export function DoctorVisitAssistant() {
               <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-white shadow-glow">
                 <Stethoscope className="h-5 w-5" />
               </span>
-              <h2 className="text-xl font-black text-ink dark:text-white">Consultation Preparation Brief</h2>
+              <h2 className="text-xl font-black text-ink dark:text-white">{t.ui.consultationBrief}</h2>
             </div>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-muted dark:text-white/60">
-              This summary condenses your longitudinal journals, screening evaluations, and symptom counts into a concise, clinic-ready briefing paper to make your doctor visits more productive and focused.
+              {t.ui.consultationSummaryText}
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -114,10 +111,10 @@ export function DoctorVisitAssistant() {
               onClick={handleRefresh}
               disabled={refreshing}
             >
-              <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? "animate-spin" : ""}`} /> Refresh Data
+              <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? "animate-spin" : ""}`} /> {t.ui.refreshData}
             </Button>
             <Button onClick={handleDownloadPDF} disabled={!summary}>
-              <Download className="mr-2 h-4 w-4" /> Download Brief (PDF)
+              <Download className="mr-2 h-4 w-4" /> {t.ui.downloadBrief}
             </Button>
           </div>
         </div>
@@ -127,7 +124,7 @@ export function DoctorVisitAssistant() {
         <LoadingSkeleton />
       ) : !summary ? (
         <Card className="text-center p-8">
-          <p className="text-sm font-bold text-muted">Unable to synthesize visit summary. Please log symptoms and try again.</p>
+          <p className="text-sm font-bold text-muted">{t.ui.unableSynthesize}</p>
         </Card>
       ) : (
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
@@ -136,15 +133,15 @@ export function DoctorVisitAssistant() {
             {/* Screenings and Vitals Summary Card */}
             <Card>
               <SectionHeader
-                title="Longitudinal Clinical Overview"
+                title={t.ui.longitudinalOverview}
                 subtitle={`Synthesized for ${summary.patient_name} on ${summary.generated_at}`}
               />
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="rounded-2xl border border-lavender-200/80 bg-lavender-50/70 p-4 dark:border-white/10 dark:bg-white/5">
-                  <p className="text-xs font-black uppercase text-muted">PCOS Clinical Status</p>
+                  <p className="text-xs font-black uppercase text-muted">{t.ui.pcosClinicalStatus}</p>
                   <p className="mt-1 text-lg font-black text-ink dark:text-white">
-                    {summary.summary.pcos_screening.risk_level.toUpperCase()} RISK
+                    {summary.summary.pcos_screening.risk_level.toUpperCase()} {t.ui.riskSuffix}
                   </p>
                   <p className="mt-1 text-xs text-muted dark:text-white/60">
                     {summary.summary.pcos_screening.notes}
@@ -152,45 +149,45 @@ export function DoctorVisitAssistant() {
                 </div>
 
                 <div className="rounded-2xl border border-lavender-200/80 bg-lavender-50/70 p-4 dark:border-white/10 dark:bg-white/5">
-                  <p className="text-xs font-black uppercase text-muted">Postpartum Mental Health (EPDS)</p>
+                  <p className="text-xs font-black uppercase text-muted">{t.ui.postpartumMentalHealth}</p>
                   <p className="mt-1 text-lg font-black text-ink dark:text-white">
-                    {summary.summary.ppd_screening.risk_level.toUpperCase()} RISK
+                    {summary.summary.ppd_screening.risk_level.toUpperCase()} {t.ui.riskSuffix}
                   </p>
                   <p className="mt-1 text-xs text-muted dark:text-white/60">
                     {summary.summary.ppd_screening.sentiment
-                      ? `Emotional sentiment: ${summary.summary.ppd_screening.sentiment}`
-                      : "Screening logged without text sentiment"}
+                      ? `${t.ui.sentimentPrefix} ${summary.summary.ppd_screening.sentiment}`
+                      : t.ui.screeningWithoutSentiment}
                   </p>
                 </div>
               </div>
 
               {/* Symptom frequency in last 7 days */}
               <div className="mt-5 rounded-2xl border border-lavender-200/80 p-4 dark:border-white/10">
-                <p className="text-xs font-black uppercase tracking-wider text-muted">7-Day Symptom Frequency</p>
+                <p className="text-xs font-black uppercase tracking-wider text-muted">{t.ui.symptomFrequency}</p>
                 <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
                   <div className="rounded-xl bg-lavender-100/70 p-3 text-center dark:bg-white/5">
                     <p className="text-2xl font-black text-ink dark:text-white">
                       {summary.summary.symptom_frequency_last_7_days.fatigue_days ?? 0}
                     </p>
-                    <p className="text-xs font-bold text-muted">Fatigue Days</p>
+                    <p className="text-xs font-bold text-muted">{t.ui.fatigueDays}</p>
                   </div>
                   <div className="rounded-xl bg-lavender-100/70 p-3 text-center dark:bg-white/5">
                     <p className="text-2xl font-black text-ink dark:text-white">
                       {summary.summary.symptom_frequency_last_7_days.headache_days ?? 0}
                     </p>
-                    <p className="text-xs font-bold text-muted">Headache Days</p>
+                    <p className="text-xs font-bold text-muted">{t.ui.headacheDays}</p>
                   </div>
                   <div className="rounded-xl bg-lavender-100/70 p-3 text-center dark:bg-white/5">
                     <p className="text-2xl font-black text-ink dark:text-white">
                       {summary.summary.symptom_frequency_last_7_days.sleep_issue_days ?? 0}
                     </p>
-                    <p className="text-xs font-bold text-muted">Sleep Issues</p>
+                    <p className="text-xs font-bold text-muted">{t.ui.sleepIssues}</p>
                   </div>
                   <div className="rounded-xl bg-lavender-100/70 p-3 text-center dark:bg-white/5">
                     <p className="text-2xl font-black text-ink dark:text-white">
                       {summary.summary.symptom_frequency_last_7_days.anxiety_days ?? 0}
                     </p>
-                    <p className="text-xs font-bold text-muted">Anxiety Days</p>
+                    <p className="text-xs font-bold text-muted">{t.ui.anxietyDays}</p>
                   </div>
                 </div>
               </div>
@@ -203,7 +200,7 @@ export function DoctorVisitAssistant() {
                   <HelpCircle className="h-5 w-5" />
                 </span>
                 <h3 className="text-base font-black text-ink dark:text-white">
-                  Important Questions to Ask Your Doctor
+                  {t.ui.importantDoctorQuestions}
                 </h3>
               </div>
 
@@ -228,8 +225,8 @@ export function DoctorVisitAssistant() {
             {/* Suggested Records to bring */}
             <Card>
               <SectionHeader
-                title="What to Bring to Your Visit"
-                subtitle="Checklist of essential records"
+                title={t.ui.whatToBring}
+                subtitle={t.ui.recordsChecklist}
               />
               <div className="space-y-3">
                 {summary.suggested_records_to_bring.map((item, idx) => (
@@ -248,7 +245,7 @@ export function DoctorVisitAssistant() {
             <Card className="border border-amber-200 bg-amber-50/70 dark:border-amber-500/20 dark:bg-amber-500/10">
               <div className="flex items-center gap-2 text-amber-800 dark:text-amber-200">
                 <ShieldAlert className="h-5 w-5 shrink-0" />
-                <h4 className="font-black text-sm">Clinical Safety Disclaimer</h4>
+                <h4 className="font-black text-sm">{t.ui.clinicalSafetyDisclaimer}</h4>
               </div>
               <p className="mt-2 text-xs leading-5 text-amber-900 dark:text-amber-200/90">
                 {summary.disclaimer}

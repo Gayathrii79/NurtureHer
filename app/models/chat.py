@@ -1,29 +1,26 @@
-﻿from __future__ import annotations
-
 import uuid
-from typing import Any
+from datetime import datetime
+from typing import TYPE_CHECKING
 
-from app.models.base import BaseDocument, parse_uuid
+from sqlalchemy import DateTime, ForeignKey, String, Text, func
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.core.database import Base
+
+if TYPE_CHECKING:
+    from app.models.user import User
 
 
-class ChatMessage(BaseDocument):
-    collection_name = "chat_messages"
+class ChatMessage(Base):
+    __tablename__ = "chat_messages"
 
-    def __init__(self, **kwargs: Any) -> None:
-        self.user_id: uuid.UUID = parse_uuid(kwargs.pop("user_id", None)) or uuid.uuid4()
-        self.message: str = kwargs.pop("message", "")
-        self.response: str = kwargs.pop("response", "")
-        self.language: str = kwargs.pop("language", "en")
-        self.retrieved_sources: list[dict[str, Any]] = kwargs.pop("retrieved_sources", [])
-        super().__init__(**kwargs)
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False)
+    message: Mapped[str] = mapped_column(Text, nullable=False)
+    response: Mapped[str] = mapped_column(Text, nullable=False)
+    language: Mapped[str] = mapped_column(String(16), default="en", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
-    @classmethod
-    def from_mongo(cls, doc: dict[str, Any] | None) -> ChatMessage | None:
-        if not doc:
-            return None
-        doc_copy = dict(doc)
-        if "_id" in doc_copy:
-            doc_copy["id"] = parse_uuid(doc_copy.pop("_id"))
-        if "user_id" in doc_copy:
-            doc_copy["user_id"] = parse_uuid(doc_copy["user_id"])
-        return cls(**doc_copy)
+    user: Mapped["User"] = relationship(back_populates="chat_messages")
+

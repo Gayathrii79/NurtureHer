@@ -109,6 +109,15 @@ python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 *The backend API will start at **`http://127.0.0.1:8000`** (Interactive OpenAPI Docs at **`http://127.0.0.1:8000/docs`**).*
 
+### Demo startup guardrail
+Do not run only the Vite frontend and expect the demo to work. The login page and every 1-click demo login call depend on the FastAPI backend. If the backend is offline, the browser will display `502 Bad Gateway` responses from the Vite proxy.
+
+Use this single command instead:
+```powershell
+python scripts/start_demo.py
+```
+This starts the backend and the frontend together, verifies both services are reachable, and opens the app automatically.
+
 ### Step 3: Set Up Frontend
 In a second terminal:
 ```powershell

@@ -1,16 +1,8 @@
 from app.schemas.health import PCOSPredictRequest
 from app.ml.pcos_feature_engineering import engineer_pcos_features
+from app.ml.features import FEATURE_ORDER
 
-
-FEATURE_ORDER = [
-    "age",
-    "bmi",
-    "cycle_irregularity",
-    "hair_growth",
-    "skin_darkening",
-    "weight_gain",
-    "follicle_count",
-]
+__all__ = ["FEATURE_ORDER", "preprocess_pcos_features"]
 
 
 def preprocess_pcos_features(payload: PCOSPredictRequest) -> list[float]:
